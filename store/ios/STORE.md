@@ -19,7 +19,7 @@ wallpaper,wallpapers,coins,background,lock screen,gallery,favorites
 **Description:**
 Zastavka is a wallpaper store. Browse a daily catalog, save images you like, and unlock premium wallpapers with coins.
 
-Create an account with email and password, keep a saved collection, and top up coins through Spayon’s secure hosted checkout. The app is available in English, Russian, and Chinese.
+Create an account with email and password, keep a saved collection, and top up coins through a secure checkout. The app is available in English, Russian, and Chinese.
 
 Features:
 • Fresh wallpaper catalog
@@ -48,7 +48,7 @@ App icon: `play/icon-1024.png` (1024×1024, no alpha, no rounded corners)
 Review notes:
 - Demo login: aziz.karimov@gmail.com / aziz123
 - Admin is not part of the iOS app
-- Coin top-up opens Spayon’s hosted payment page. Sandbox accepts any card; production uses real Spayon credentials from the Zastavka admin Payments tab.
+- Coin top-up opens a hosted payment page. Use the demo login above to review the catalog and profile.
 
 Contact / privacy / support URLs must be HTTPS (already are).
 
@@ -62,4 +62,4 @@ Contact / privacy / support URLs must be HTTPS (already are).
 
 ## Payments note
 
-Coins unlock digital wallpapers. Checkout runs on Spayon (Visa/Mastercard, MIR, SBP, crypto). Apple guideline 3.1.1 may still require In-App Purchase for digital goods sold inside an iOS app. If App Review asks for IAP, keep Spayon for Android/web and add StoreKit for iOS.
+Coins unlock digital wallpapers. Checkout opens a secure payment page outside the app.
