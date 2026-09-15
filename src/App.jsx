@@ -3,7 +3,7 @@ import { USER, PACKAGES, formatUsd, usdForCoins } from "./data";
 import { LANGS, langLabel, useI18n } from "./i18n";
 import { api, getToken, setToken, wallpaperSrc } from "./api";
 import { Icon, Logo } from "./icons";
-import { exitApp, initNativeShell, legalUrl, listenBackButton, saveWallpaper } from "./native";
+import { exitApp, initNativeShell, legalUrl, listenAppResume, listenBackButton, openPaymentCheckout, saveWallpaper } from "./native";
 import {
   IllustrationGallery,
   IllustrationCoins,
@@ -24,7 +24,7 @@ function CoinMark({ size = 18 }) {
 }
 
 export default function App() {
-  const { t } = useI18n();
+  const { t, lang } = useI18n();
   const params = new URLSearchParams(window.location.search);
   const [flow, setFlow] = useState(() => (params.get("screen") === "app" ? "app" : "onboarding"));
   const [step, setStep] = useState(0);
@@ -43,7 +43,7 @@ export default function App() {
   const [fly, setFly] = useState(null);
   const [pkg, setPkg] = useState(PACKAGES[1].id);
   const [coinQty, setCoinQty] = useState(String(PACKAGES[1].coins));
-  const [card, setCard] = useState({ number: "", expiry: "", cvv: "", amount: formatUsd(PACKAGES[1].usd) });
+  const [payAmount, setPayAmount] = useState(formatUsd(PACKAGES[1].usd));
   const [paying, setPaying] = useState(false);
   const [authBusy, setAuthBusy] = useState(false);
   const coinBtnRef = useRef(null);
@@ -93,12 +93,48 @@ export default function App() {
     return () => clearTimeout(tmr);
   }, [toast]);
 
+  useEffect(() => {
+    if (flow !== "app") return;
+    const search = new URLSearchParams(window.location.search);
+    const payState = search.get("pay");
+    const sessionId = search.get("sessionId");
+    let orderId = "";
+    try {
+      orderId = JSON.parse(sessionStorage.getItem("zastavka-topup") || "{}").orderId || "";
+    } catch {
+      orderId = "";
+    }
+    if (payState === "cancel") notify(t("toastPayFail"));
+    if (sessionId || orderId) refreshTopup(orderId, sessionId);
+    if (payState || sessionId) {
+      search.delete("pay");
+      search.delete("sessionId");
+      const q = search.toString();
+      window.history.replaceState({}, "", `${window.location.pathname}${q ? `?${q}` : ""}${window.location.hash}`);
+    }
+  }, [flow]);
+
+  useEffect(() => {
+    let off = () => {};
+    listenAppResume(() => {
+      try {
+        const pending = JSON.parse(sessionStorage.getItem("zastavka-topup") || "{}");
+        if (pending.orderId || pending.sessionId) refreshTopup(pending.orderId, pending.sessionId);
+      } catch {
+        /* ignore */
+      }
+    }).then((remove) => {
+      off = remove;
+    });
+    return () => off();
+  }, []);
+
   function applyCoins(qty, packageId) {
     const n = Number(qty);
     const match = PACKAGES.find((p) => p.id === packageId) || PACKAGES.find((p) => p.coins === n);
     setPkg(match ? match.id : "");
     setCoinQty(qty);
-    setCard((c) => ({ ...c, amount: formatUsd(match ? match.usd : usdForCoins(n)) }));
+    setPayAmount(formatUsd(match ? match.usd : usdForCoins(n)));
   }
 
   const savedItems = useMemo(
@@ -110,17 +146,30 @@ export default function App() {
     setToast(msg);
   }
 
-  function formatCard(value) {
-    return value
-      .replace(/\D/g, "")
-      .slice(0, 16)
-      .replace(/(\d{4})(?=\d)/g, "$1 ");
-  }
-
-  function formatExpiry(value) {
-    const d = value.replace(/\D/g, "").slice(0, 4);
-    if (d.length < 3) return d;
-    return `${d.slice(0, 2)}/${d.slice(2)}`;
+  async function refreshTopup(orderId, sessionId) {
+    if (!getToken() || (!orderId && !sessionId)) return null;
+    const query = new URLSearchParams();
+    if (orderId) query.set("orderId", orderId);
+    if (sessionId) query.set("sessionId", sessionId);
+    try {
+      const data = await api(`/topup/status?${query.toString()}`);
+      if (data.user) {
+        setUser({ ...USER, ...data.user });
+        setCoins(data.user.coins);
+        setPurchased(data.user.purchased || []);
+        setSaved(data.user.saved || []);
+      }
+      if (data.status === "paid") {
+        sessionStorage.removeItem("zastavka-topup");
+        notify(t("toastToppedUp", { usd: formatUsd(usdForCoins(data.coins)) }));
+      } else if (data.status === "failed" || data.status === "expired") {
+        sessionStorage.removeItem("zastavka-topup");
+        notify(t("toastPayFail"));
+      }
+      return data;
+    } catch {
+      return null;
+    }
   }
 
   function openTopUp() {
@@ -203,29 +252,24 @@ export default function App() {
 
   async function pay() {
     if (paying) return;
-    if (card.number.replace(/\s/g, "").length < 16 || card.expiry.length < 5 || card.cvv.length < 3) {
-      notify(t("toastCard"));
-      return;
-    }
     const qty = Number(coinQty);
     if (!Number.isFinite(qty) || qty < 1) {
       notify(t("toastCoins"));
       return;
     }
-    const usd = formatUsd(usdForCoins(qty));
     setPaying(true);
     try {
-      const { user: u } = await api("/topup", {
+      const data = await api("/topup", {
         method: "POST",
-        body: JSON.stringify({ coins: qty, usd: usdForCoins(qty) }),
+        body: JSON.stringify({ coins: qty, usd: usdForCoins(qty), lang }),
       });
-      flyCoin(coinBtnRef.current);
-      setCoins(u.coins);
+      sessionStorage.setItem(
+        "zastavka-topup",
+        JSON.stringify({ orderId: data.orderId, sessionId: data.sessionId, coins: qty })
+      );
       setShowTopUp(false);
-      notify(t("toastToppedUp", { usd }));
-      setPkg(PACKAGES[1].id);
-      setCoinQty(String(PACKAGES[1].coins));
-      setCard({ number: "", expiry: "", cvv: "", amount: formatUsd(PACKAGES[1].usd) });
+      notify(t("toastPayRedirect"));
+      await openPaymentCheckout(data.sessionUrl);
     } catch (err) {
       notify(err.message);
     } finally {
@@ -355,6 +399,7 @@ export default function App() {
             <TopUpSheet
               pkg={pkg}
               coinQty={coinQty}
+              amount={payAmount}
               onSelectPackage={(id) => {
                 const selected = PACKAGES.find((p) => p.id === id);
                 if (selected) applyCoins(String(selected.coins), selected.id);
@@ -363,13 +408,9 @@ export default function App() {
                 const cleaned = value.replace(/\D/g, "").slice(0, 6);
                 applyCoins(cleaned);
               }}
-              card={card}
-              setCard={setCard}
               paying={paying}
               onClose={() => setShowTopUp(false)}
               onPay={pay}
-              formatCard={formatCard}
-              formatExpiry={formatExpiry}
             />
           )}
 
@@ -765,15 +806,12 @@ function WallpaperGrid({ items, purchased, saved, download, onTap, onSave }) {
 function TopUpSheet({
   pkg,
   coinQty,
+  amount,
   onSelectPackage,
   onCoinQtyChange,
-  card,
-  setCard,
   paying,
   onClose,
   onPay,
-  formatCard,
-  formatExpiry,
 }) {
   const { t } = useI18n();
   return (
@@ -816,39 +854,10 @@ function TopUpSheet({
           </div>
         </div>
         <div className="field">
-          <label>{t("cardNumber")}</label>
-          <input
-            inputMode="numeric"
-            placeholder="**** **** **** ****"
-            value={card.number}
-            onChange={(e) => setCard((c) => ({ ...c, number: formatCard(e.target.value) }))}
-          />
-        </div>
-        <div className="row-2">
-          <div className="field">
-            <label>{t("expiry")}</label>
-            <input
-              inputMode="numeric"
-              placeholder="MM/YY"
-              value={card.expiry}
-              onChange={(e) => setCard((c) => ({ ...c, expiry: formatExpiry(e.target.value) }))}
-            />
-          </div>
-          <div className="field">
-            <label>{t("cvv")}</label>
-            <input
-              inputMode="numeric"
-              placeholder="123"
-              value={card.cvv}
-              maxLength={3}
-              onChange={(e) => setCard((c) => ({ ...c, cvv: e.target.value.replace(/\D/g, "").slice(0, 3) }))}
-            />
-          </div>
-        </div>
-        <div className="field">
           <label>{t("amount")}</label>
-          <input value={card.amount} readOnly placeholder="$0.00" />
+          <input value={amount} readOnly placeholder="$0.00" />
         </div>
+        <p className="legal">{t("paySecure")}</p>
         <PrimaryButton onClick={onPay}>{paying ? t("paying") : t("pay")}</PrimaryButton>
       </div>
     </div>

@@ -1,7 +1,10 @@
-# Zastavka — Play Store
+# Zastavka — Play Store listing
 
 Package name: `com.zastavka.app`  
-Version: `1.0.0` (versionCode 1)
+Version: `1.0.0` (versionCode 1)  
+Category: Personalization  
+Content rating: Everyone / PEGI 3  
+Default language: English  
 
 ## Phone install (debug)
 
@@ -34,27 +37,34 @@ cd android && ./gradlew bundleRelease
 
 Output: `android/app/build/outputs/bundle/release/app-release.aab`
 
-## Store listing
+## Store listing copy
 
-**Title:** Zastavka
+**App name (30):** Zastavka
 
-**Short description:**
+**Short description (80):**
 Wallpaper store with coins, favorites, and a clean light design.
 
 **Full description:**
 Zastavka is a wallpaper store. Browse a daily catalog, save images you like, and unlock premium wallpapers with coins.
 
-- Email and password accounts
-- Coin top-up
-- Saved collection
-- English, Russian, and Chinese
+Create an account with email and password, keep a saved collection, and top up coins through Spayon’s secure checkout (Visa/Mastercard, MIR, SBP, or crypto). The app is available in English, Russian, and Chinese.
 
-Privacy policy: http://130.61.247.126/zastavka/privacy.html
+Features:
+• Fresh wallpaper catalog
+• Coin balance and premium unlocks
+• Saved favorites
+• Secure hosted payments
+• Light, full-screen design
 
-Icons: `play/icon-512.png`, `play/icon-1024.png`  
-Feature graphic: `play/feature-graphic.png`
+Privacy policy: https://130.61.247.126.sslip.io/zastavka/privacy.html
+Terms: https://130.61.247.126.sslip.io/zastavka/terms.html
 
-Phone screenshots (1080×1920, Play Console): `play/screenshots/`
+## Graphics
+
+- App icon: `play/icon-512.png` (512×512)
+- High-res icon: `play/icon-1024.png`
+- Feature graphic: `play/feature-graphic.png` (1024×500)
+- Phone screenshots (1080×1920, 2–8 images): `play/screenshots/`
 
 1. `01-onboarding.png`
 2. `02-onboarding-coins.png`
@@ -65,9 +75,17 @@ Phone screenshots (1080×1920, Play Console): `play/screenshots/`
 7. `07-profile.png`
 8. `08-topup.png`
 
-## Data safety (Play Console)
+## Data safety
 
-- Collected: email, name, app activity (saves and purchases)
-- Purpose: app functionality
-- Encrypted in transit: no (HTTP API today — switch to HTTPS before a public listing)
+- Collected: name, email, app activity (saves, wallpaper unlocks, coin top-ups)
+- Shared: name, email, and order amount with Spayon to process payments
+- Purpose: app functionality, account, payments
+- Encrypted in transit: yes (HTTPS)
 - Users can request deletion: yes, via developer email
+
+## Live URLs
+
+- Store: https://130.61.247.126.sslip.io/zastavka/
+- Admin: https://130.61.247.126.sslip.io/zastavka-admin/
+- API: https://130.61.247.126.sslip.io/zastavka-api/
+- Privacy: https://130.61.247.126.sslip.io/zastavka/privacy.html

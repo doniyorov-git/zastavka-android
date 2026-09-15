@@ -1,6 +1,6 @@
 # Zastavka API
 
-Base URL: `/zastavka-api`
+Base URL: `https://130.61.247.126.sslip.io/zastavka-api`
 
 Interactive docs: **[/zastavka-api/docs](/zastavka-api/docs)**  
 OpenAPI JSON: **[/zastavka-api/openapi.json](/zastavka-api/openapi.json)**

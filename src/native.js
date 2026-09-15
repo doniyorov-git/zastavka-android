@@ -96,6 +96,35 @@ export async function exitApp() {
   App.exitApp();
 }
 
+export async function openPaymentCheckout(url) {
+  if (!url) return;
+  if (isNativeApp()) {
+    const { Browser } = await import("@capacitor/browser");
+    await Browser.open({ url, presentationStyle: "fullscreen" });
+    return;
+  }
+  window.location.assign(url);
+}
+
+export async function listenAppResume(handler) {
+  if (!isNativeApp()) return () => {};
+  const { App } = await import("@capacitor/app");
+  const sub = await App.addListener("appStateChange", (state) => {
+    if (state.isActive) handler();
+  });
+  let browserSub = { remove: () => {} };
+  try {
+    const { Browser } = await import("@capacitor/browser");
+    browserSub = await Browser.addListener("browserFinished", handler);
+  } catch {
+    /* web */
+  }
+  return () => {
+    sub.remove();
+    browserSub.remove?.();
+  };
+}
+
 export function legalUrl(kind) {
   const file = kind === "terms" ? "terms.html" : "privacy.html";
   const base = import.meta.env.BASE_URL || "./";

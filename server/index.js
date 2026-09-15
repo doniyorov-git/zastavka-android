@@ -30,7 +30,18 @@ import {
   createSession,
   findSession,
   issueUserToken,
+  getSpayonSettings,
+  publicSpayonSettings,
+  saveSpayonSettings,
+  createTopup,
+  getTopupById,
+  getTopupByOrderId,
+  getTopupBySessionId,
+  updateTopup,
+  listTopups,
+  applyPaidTopup,
 } from "./db.js";
+import { createPaymentSession, fetchSessionStatus, verifyCallbackSignature, invalidateSpayonToken } from "./spayon.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3050);
@@ -59,7 +70,14 @@ const upload = multer({
 
 const app = express();
 app.use(cors());
-app.use(express.json({ limit: "2mb" }));
+app.use(
+  express.json({
+    limit: "2mb",
+    verify: (req, _res, buf) => {
+      req.rawBody = buf;
+    },
+  })
+);
 app.use(`${PREFIX}/uploads`, express.static(UPLOAD_DIR));
 
 function auth(requiredRole) {
@@ -177,16 +195,115 @@ app.post(`${PREFIX}/purchases`, auth("user"), (req, res) => {
   res.json({ user: publicUser(user), purchase });
 });
 
-app.post(`${PREFIX}/topup`, auth("user"), (req, res) => {
-  const coins = Number(req.body?.coins);
-  const usd = Number(req.body?.usd) || 0;
+app.post(`${PREFIX}/topup`, auth("user"), async (req, res) => {
+  const coins = Math.round(Number(req.body?.coins));
   if (!Number.isFinite(coins) || coins < 1) {
     return res.status(400).json({ error: "Enter a coin amount" });
   }
-  const user = req.user;
-  user.coins += Math.round(coins);
-  res.json({ user: publicUser(saveUser(user)), usd });
+  const cfg = getSpayonSettings();
+  if (!cfg.clientId || !cfg.clientSecret || !cfg.callbackSecret) {
+    return res.status(503).json({ error: "Payments are not configured yet" });
+  }
+  const amount = Number(req.body?.usd) || usdFromCoins(coins);
+  const now = new Date().toISOString();
+  const topup = createTopup({
+    id: uuid(),
+    userId: req.user.id,
+    coins,
+    amount,
+    currency: cfg.currency || "USD",
+    sessionId: null,
+    orderId: `zastavka-${req.user.id.slice(0, 8)}-${uuid().slice(0, 8)}`,
+    status: "pending",
+    createdAt: now,
+    updatedAt: now,
+  });
+  try {
+    const session = await createPaymentSession({
+      topup,
+      user: req.user,
+      lang: String(req.body?.lang || "en"),
+    });
+    updateTopup(topup.id, { sessionId: session.session_id, status: session.status || "pending" });
+    res.json({
+      sessionUrl: session.session_url,
+      sessionId: session.session_id,
+      orderId: topup.orderId,
+      status: "pending",
+      coins,
+      amount,
+    });
+  } catch (err) {
+    updateTopup(topup.id, { status: "failed" });
+    res.status(err.status || 502).json({ error: err.message || "Payment session failed" });
+  }
 });
+
+app.get(`${PREFIX}/topup/status`, auth("user"), async (req, res) => {
+  const sessionId = String(req.query.sessionId || "");
+  const orderId = String(req.query.orderId || "");
+  let topup = sessionId ? getTopupBySessionId(sessionId) : null;
+  if (!topup && orderId) topup = getTopupByOrderId(orderId);
+  if (!topup || topup.userId !== req.user.id) {
+    return res.status(404).json({ error: "Payment not found" });
+  }
+  if (topup.status !== "paid" && topup.sessionId) {
+    const remote = await fetchSessionStatus(topup.sessionId).catch(() => null);
+    const remoteStatus = String(remote?.status || "").toLowerCase();
+    if (remoteStatus === "paid") {
+      const applied = applyPaidTopup({ ...topup, sessionId: topup.sessionId });
+      return res.json({
+        status: "paid",
+        coins: topup.coins,
+        user: publicUser(applied?.user || findUserById(req.user.id)),
+      });
+    }
+    if (remoteStatus === "failed" || remoteStatus === "expired") {
+      updateTopup(topup.id, { status: remoteStatus });
+      topup = getTopupById(topup.id);
+    }
+  }
+  res.json({
+    status: topup.status,
+    coins: topup.coins,
+    orderId: topup.orderId,
+    sessionId: topup.sessionId,
+    user: publicUser(findUserById(req.user.id)),
+  });
+});
+
+app.post(`${PREFIX}/topup/callback`, (req, res) => {
+  const cfg = getSpayonSettings();
+  const signature = req.headers["x-signature"];
+  const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
+  if (!verifyCallbackSignature(raw, signature, cfg.callbackSecret)) {
+    return res.status(401).json({ error: "Invalid signature" });
+  }
+  const payload = req.body || {};
+  const status = String(payload.status || "").toLowerCase();
+  const sessionId = payload.sessionId || payload.session_id;
+  const orderId = payload.orderId || payload.order_id;
+  let topup = sessionId ? getTopupBySessionId(sessionId) : null;
+  if (!topup && orderId) topup = getTopupByOrderId(orderId);
+  if (!topup) return res.status(404).json({ error: "Order not found" });
+  if (sessionId && !topup.sessionId) updateTopup(topup.id, { sessionId, status: topup.status });
+  if (status === "paid") applyPaidTopup({ ...getTopupByOrderId(topup.orderId), sessionId: sessionId || topup.sessionId });
+  else if (status === "failed" || status === "expired" || status === "pending") {
+    if (topup.status !== "paid") updateTopup(topup.id, { sessionId: sessionId || topup.sessionId, status });
+  }
+  res.json({ ok: true });
+});
+
+function usdFromCoins(coins) {
+  const packs = [
+    { coins: 100, usd: 0.99 },
+    { coins: 300, usd: 2.99 },
+    { coins: 750, usd: 5.99 },
+  ];
+  const match = packs.find((p) => p.coins === coins);
+  if (match) return match.usd;
+  return Math.round(coins * 0.01 * 100) / 100;
+}
 
 app.post(`${PREFIX}/admin/login`, (req, res) => {
   if (String(req.body?.password || "") !== ADMIN_PASSWORD) {
@@ -199,6 +316,19 @@ app.post(`${PREFIX}/admin/login`, (req, res) => {
 
 app.get(`${PREFIX}/admin/stats`, auth("admin"), (_req, res) => {
   res.json(stats());
+});
+
+app.get(`${PREFIX}/admin/spayon`, auth("admin"), (_req, res) => {
+  res.json({ settings: publicSpayonSettings() });
+});
+
+app.put(`${PREFIX}/admin/spayon`, auth("admin"), (req, res) => {
+  invalidateSpayonToken();
+  res.json({ settings: saveSpayonSettings(req.body || {}) });
+});
+
+app.get(`${PREFIX}/admin/topups`, auth("admin"), (_req, res) => {
+  res.json({ topups: listTopups() });
 });
 
 app.get(`${PREFIX}/admin/users`, auth("admin"), (_req, res) => {

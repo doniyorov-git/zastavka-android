@@ -79,9 +79,9 @@ export default function App() {
       <aside className="side">
         <div className="brand">Zastavka</div>
         <nav>
-          {["dashboard", "images", "purchases", "users"].map((id) => (
+          {["dashboard", "images", "purchases", "users", "payments"].map((id) => (
             <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>
-              {t(id === "dashboard" ? "dashboard" : id === "images" ? "images" : id === "purchases" ? "purchases" : "users")}
+              {t(id)}
             </button>
           ))}
           <a href="/zastavka-api/docs" target="_blank" rel="noreferrer">
@@ -257,6 +257,8 @@ export default function App() {
             </div>
           </section>
         )}
+
+        {tab === "payments" && <SpayonPanel i18n={i18n} onError={setError} />}
       </main>
 
       {editing && (
@@ -429,5 +431,207 @@ function ImageModal({ i18n, item, onClose, onSaved, onError }) {
         </div>
       </form>
     </div>
+  );
+}
+
+const METHOD_OPTIONS = [
+  { id: "visamaster", label: "Visa / Mastercard" },
+  { id: "mir", label: "MIR" },
+  { id: "crypto", label: "Crypto" },
+  { id: "sbp", label: "SBP" },
+];
+
+function SpayonPanel({ i18n, onError }) {
+  const { t } = i18n;
+  const [settings, setSettings] = useState(null);
+  const [topups, setTopups] = useState([]);
+  const [form, setForm] = useState({
+    env: "sandbox",
+    clientId: "",
+    clientSecret: "",
+    callbackSecret: "",
+    currency: "USD",
+    defaultMethod: "visamaster",
+    methods: ["visamaster"],
+    publicOrigin: "https://130.61.247.126.sslip.io",
+  });
+  const [busy, setBusy] = useState(false);
+  const [saved, setSaved] = useState(false);
+
+  async function load() {
+    const [s, p] = await Promise.all([api("/admin/spayon"), api("/admin/topups")]);
+    setSettings(s.settings);
+    setTopups(p.topups || []);
+    setForm((cur) => ({
+      ...cur,
+      env: s.settings.env || "sandbox",
+      clientId: s.settings.clientId || "",
+      clientSecret: "",
+      callbackSecret: "",
+      currency: s.settings.currency || "USD",
+      defaultMethod: s.settings.defaultMethod || "visamaster",
+      methods: s.settings.methods?.length ? s.settings.methods : ["visamaster"],
+      publicOrigin: s.settings.publicOrigin || "https://130.61.247.126.sslip.io",
+    }));
+  }
+
+  useEffect(() => {
+    load().catch((err) => onError(err.message));
+  }, []);
+
+  function toggleMethod(id) {
+    setForm((cur) => {
+      const has = cur.methods.includes(id);
+      const methods = has ? cur.methods.filter((m) => m !== id) : [...cur.methods, id];
+      return { ...cur, methods: methods.length ? methods : [id] };
+    });
+  }
+
+  async function save(e) {
+    e.preventDefault();
+    setBusy(true);
+    setSaved(false);
+    try {
+      const data = await api("/admin/spayon", { method: "PUT", body: JSON.stringify(form) });
+      setSettings(data.settings);
+      setForm((cur) => ({ ...cur, clientSecret: "", callbackSecret: "" }));
+      setSaved(true);
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <section>
+      <h1>{t("payments")}</h1>
+      <p className="hint">{t("spayonHint")}</p>
+      {settings && (
+        <p className={`status-pill ${settings.configured ? "ok" : "warn"}`}>
+          {settings.configured ? t("spayonReady") : t("spayonMissing")}
+        </p>
+      )}
+      <form className="settings-card" onSubmit={save}>
+        <label>
+          {t("environment")}
+          <select value={form.env} onChange={(e) => setForm((c) => ({ ...c, env: e.target.value }))}>
+            <option value="sandbox">Sandbox</option>
+            <option value="production">Production</option>
+          </select>
+        </label>
+        <label>
+          {t("clientId")}
+          <input value={form.clientId} onChange={(e) => setForm((c) => ({ ...c, clientId: e.target.value }))} autoComplete="off" />
+        </label>
+        <label>
+          {t("clientSecret")}
+          <input
+            type="password"
+            value={form.clientSecret}
+            placeholder={settings?.clientSecretSet ? settings.clientSecretMask : t("secretPlaceholder")}
+            onChange={(e) => setForm((c) => ({ ...c, clientSecret: e.target.value }))}
+            autoComplete="new-password"
+          />
+        </label>
+        <label>
+          {t("callbackSecret")}
+          <input
+            type="password"
+            value={form.callbackSecret}
+            placeholder={settings?.callbackSecretSet ? settings.callbackSecretMask : t("secretPlaceholder")}
+            onChange={(e) => setForm((c) => ({ ...c, callbackSecret: e.target.value }))}
+            autoComplete="new-password"
+          />
+        </label>
+        <label>
+          {t("currency")}
+          <select value={form.currency} onChange={(e) => setForm((c) => ({ ...c, currency: e.target.value }))}>
+            {["USD", "EUR", "GBP", "RUB", "AMD"].map((code) => (
+              <option key={code} value={code}>
+                {code}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label>
+          {t("defaultMethod")}
+          <select value={form.defaultMethod} onChange={(e) => setForm((c) => ({ ...c, defaultMethod: e.target.value }))}>
+            {METHOD_OPTIONS.map((m) => (
+              <option key={m.id} value={m.id}>
+                {m.label}
+              </option>
+            ))}
+          </select>
+        </label>
+        <div className="methods">
+          <span>{t("methods")}</span>
+          {METHOD_OPTIONS.map((m) => (
+            <label key={m.id} className="check">
+              <input type="checkbox" checked={form.methods.includes(m.id)} onChange={() => toggleMethod(m.id)} />
+              {m.label}
+            </label>
+          ))}
+        </div>
+        <label>
+          {t("publicOrigin")}
+          <input value={form.publicOrigin} onChange={(e) => setForm((c) => ({ ...c, publicOrigin: e.target.value }))} />
+        </label>
+        {settings && (
+          <div className="readonly">
+            <p>
+              <small>{t("callbackUrl")}</small>
+              <code>{settings.callbackUrl}</code>
+            </p>
+            <p>
+              <small>{t("returnUrl")}</small>
+              <code>{settings.returnUrl}</code>
+            </p>
+          </div>
+        )}
+        <div className="row">
+          {saved && <span className="ok-text">{t("savedOk")}</span>}
+          <button className="primary" disabled={busy}>
+            {t("save")}
+          </button>
+        </div>
+      </form>
+
+      <h2 className="subhead">{t("topups")}</h2>
+      <div className="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>{t("order")}</th>
+              <th>{t("coins")}</th>
+              <th>{t("amount")}</th>
+              <th>{t("status")}</th>
+              <th>{t("created")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {topups.length === 0 && (
+              <tr>
+                <td colSpan={5}>{t("noRows")}</td>
+              </tr>
+            )}
+            {topups.map((item) => (
+              <tr key={item.id}>
+                <td>
+                  <div>{item.orderId}</div>
+                  <small>{item.sessionId || "—"}</small>
+                </td>
+                <td>{item.coins}</td>
+                <td>
+                  {item.amount} {item.currency}
+                </td>
+                <td>{item.status}</td>
+                <td>{new Date(item.createdAt).toLocaleString()}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </section>
   );
 }

@@ -145,6 +145,23 @@ export function initDb() {
       user_id TEXT NOT NULL,
       created_at TEXT
     );
+    CREATE TABLE IF NOT EXISTS settings (
+      key TEXT PRIMARY KEY,
+      value TEXT NOT NULL
+    );
+    CREATE TABLE IF NOT EXISTS topups (
+      id TEXT PRIMARY KEY,
+      user_id TEXT NOT NULL,
+      coins INTEGER NOT NULL,
+      amount REAL NOT NULL,
+      currency TEXT NOT NULL,
+      session_id TEXT,
+      order_id TEXT UNIQUE,
+      status TEXT NOT NULL,
+      created_at TEXT,
+      updated_at TEXT
+    );
+    CREATE INDEX IF NOT EXISTS idx_topups_session ON topups(session_id);
   `);
 
   if (fs.existsSync(JSON_FILE)) {
@@ -379,4 +396,149 @@ export function issueUserToken(user) {
   const token = makeToken();
   createSession({ token, role: "user", userId: user.id });
   return token;
+}
+
+export function getSetting(key, fallback = "") {
+  const row = db.prepare("SELECT value FROM settings WHERE key = ?").get(key);
+  return row ? row.value : fallback;
+}
+
+export function setSetting(key, value) {
+  db.prepare(
+    "INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value"
+  ).run(key, String(value ?? ""));
+}
+
+export function getSpayonSettings() {
+  const methodsRaw = getSetting("spayon_methods", "visamaster");
+  return {
+    env: getSetting("spayon_env", "sandbox"),
+    clientId: getSetting("spayon_client_id"),
+    clientSecret: getSetting("spayon_client_secret"),
+    callbackSecret: getSetting("spayon_callback_secret"),
+    currency: getSetting("spayon_currency", "USD"),
+    defaultMethod: getSetting("spayon_default_method", "visamaster"),
+    methods: methodsRaw
+      .split(",")
+      .map((item) => item.trim())
+      .filter(Boolean),
+    publicOrigin: getSetting("public_origin", "https://130.61.247.126.sslip.io"),
+  };
+}
+
+function maskSecret(value) {
+  if (!value) return "";
+  if (value.length <= 4) return "••••";
+  return `••••${value.slice(-4)}`;
+}
+
+export function publicSpayonSettings() {
+  const cfg = getSpayonSettings();
+  const origin = cfg.publicOrigin.replace(/\/$/, "");
+  return {
+    env: cfg.env,
+    clientId: cfg.clientId,
+    clientSecretSet: Boolean(cfg.clientSecret),
+    clientSecretMask: maskSecret(cfg.clientSecret),
+    callbackSecretSet: Boolean(cfg.callbackSecret),
+    callbackSecretMask: maskSecret(cfg.callbackSecret),
+    currency: cfg.currency,
+    defaultMethod: cfg.defaultMethod,
+    methods: cfg.methods,
+    publicOrigin: origin,
+    callbackUrl: `${origin}/zastavka-api/topup/callback`,
+    returnUrl: `${origin}/zastavka/?pay=return`,
+    cancelUrl: `${origin}/zastavka/?pay=cancel`,
+    configured: Boolean(cfg.clientId && cfg.clientSecret && cfg.callbackSecret),
+  };
+}
+
+export function saveSpayonSettings(body) {
+  if (body.env === "production" || body.env === "sandbox") setSetting("spayon_env", body.env);
+  if (body.clientId != null) setSetting("spayon_client_id", String(body.clientId).trim());
+  if (body.clientSecret) setSetting("spayon_client_secret", String(body.clientSecret).trim());
+  if (body.callbackSecret) setSetting("spayon_callback_secret", String(body.callbackSecret).trim());
+  if (body.currency) setSetting("spayon_currency", String(body.currency).trim().toUpperCase());
+  if (body.defaultMethod) setSetting("spayon_default_method", String(body.defaultMethod).trim());
+  if (Array.isArray(body.methods)) {
+    setSetting("spayon_methods", body.methods.map(String).join(","));
+  }
+  if (body.publicOrigin != null) {
+    setSetting("public_origin", String(body.publicOrigin).trim().replace(/\/$/, ""));
+  }
+  return publicSpayonSettings();
+}
+
+export function createTopup(row) {
+  db.prepare(
+    `INSERT INTO topups (id, user_id, coins, amount, currency, session_id, order_id, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+  ).run(
+    row.id,
+    row.userId,
+    row.coins,
+    row.amount,
+    row.currency,
+    row.sessionId || null,
+    row.orderId,
+    row.status,
+    row.createdAt,
+    row.updatedAt
+  );
+  return getTopupById(row.id);
+}
+
+export function getTopupById(id) {
+  return mapTopup(db.prepare("SELECT * FROM topups WHERE id = ?").get(id));
+}
+
+export function getTopupByOrderId(orderId) {
+  return mapTopup(db.prepare("SELECT * FROM topups WHERE order_id = ?").get(orderId));
+}
+
+export function getTopupBySessionId(sessionId) {
+  return mapTopup(db.prepare("SELECT * FROM topups WHERE session_id = ?").get(sessionId));
+}
+
+export function updateTopup(id, fields) {
+  const item = getTopupById(id);
+  if (!item) return null;
+  const next = { ...item, ...fields, updatedAt: new Date().toISOString() };
+  db.prepare(
+    "UPDATE topups SET session_id=?, status=?, updated_at=? WHERE id=?"
+  ).run(next.sessionId || null, next.status, next.updatedAt, id);
+  return getTopupById(id);
+}
+
+export function listTopups() {
+  return db.prepare("SELECT * FROM topups ORDER BY created_at DESC LIMIT 200").all().map(mapTopup);
+}
+
+function mapTopup(row) {
+  if (!row) return null;
+  return {
+    id: row.id,
+    userId: row.user_id,
+    coins: row.coins,
+    amount: row.amount,
+    currency: row.currency,
+    sessionId: row.session_id,
+    orderId: row.order_id,
+    status: row.status,
+    createdAt: row.created_at,
+    updatedAt: row.updated_at,
+  };
+}
+
+export function applyPaidTopup(topup) {
+  if (!topup) return null;
+  if (topup.status === "paid") return { topup, alreadyPaid: true };
+  const user = findUserById(topup.userId);
+  if (!user) return null;
+  const apply = db.transaction(() => {
+    user.coins += topup.coins;
+    saveUser(user);
+    return updateTopup(topup.id, { sessionId: topup.sessionId, status: "paid" });
+  });
+  return { topup: apply(), alreadyPaid: false, user: findUserById(user.id) };
 }

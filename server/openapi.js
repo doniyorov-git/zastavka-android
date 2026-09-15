@@ -154,7 +154,7 @@ export const openApi = {
       post: {
         tags: ["User"],
         security: [{ bearerAuth: [] }],
-        summary: "Add coins after card payment (demo)",
+        summary: "Create a Spayon payment session for coins",
         requestBody: {
           content: {
             "application/json": {
