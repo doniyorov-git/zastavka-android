@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1024 500">
+  <defs>
+    <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0%" stop-color="#7C8FFF"/>
+      <stop offset="100%" stop-color="#B08CFF"/>
+    </linearGradient>
+  </defs>
+  <rect width="1024" height="500" fill="#F5F7FB"/>
+  <rect x="64" y="90" width="320" height="320" rx="72" fill="url(#g)"/>
+  <rect x="128" y="178" width="192" height="144" rx="28" fill="#fff"/>
+  <path d="M128 298l54-42 42 32 42-52 54 62" fill="none" stroke="#8B7CFF" stroke-width="14" stroke-linecap="round"/>
+  <circle cx="176" cy="214" r="14" fill="#FFC93C"/>
+  <text x="430" y="230" font-family="Poppins, Arial, sans-serif" font-size="64" font-weight="700" fill="#1C1F2E">Zastavka</text>
+  <text x="430" y="290" font-family="Poppins, Arial, sans-serif" font-size="28" font-weight="500" fill="#8A90A5">Wallpaper store</text>
+</svg>
