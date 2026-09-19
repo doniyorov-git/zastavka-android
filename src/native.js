@@ -126,7 +126,7 @@ export async function listenAppResume(handler) {
 }
 
 export function legalUrl(kind) {
-  const file = kind === "terms" ? "terms.html" : "privacy.html";
+  const file = kind === "terms" ? "terms.html" : kind === "delete" ? "delete-account.html" : "privacy.html";
   const base = import.meta.env.BASE_URL || "./";
   return `${base}${file}`;
 }

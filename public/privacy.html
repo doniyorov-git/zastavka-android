@@ -3,35 +3,466 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <title>Zastavka Privacy Policy</title>
-    <style>
-      body { font-family: Poppins, system-ui, sans-serif; max-width: 720px; margin: 0 auto; padding: 28px 20px 64px; color: #1c1f2e; line-height: 1.55; }
-      h1 { font-size: 24px; }
-      h2 { font-size: 18px; margin-top: 28px; }
-      p, li { color: #4b5163; }
-      a { color: #7c8fff; }
-    </style>
+    <meta name="theme-color" content="#ffffff" />
+    <title>Privacy Policy — Zastavka</title>
+    <meta
+      name="description"
+      content="How Zastavka collects, uses, stores, and protects personal information for the wallpaper store website and apps."
+    />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="legal.css" />
   </head>
   <body>
-    <h1>Privacy Policy</h1>
-    <p>Last updated: 15 September 2026</p>
-    <p>Zastavka (“we”) provides a wallpaper store app and website. This policy explains what we collect and why.</p>
-    <h2>Data we collect</h2>
-    <ul>
-      <li>Account data: name, email, and a hashed password when you register.</li>
-      <li>App activity: saved wallpapers, purchases, and coin balance.</li>
-    </ul>
-    <h2>How we use data</h2>
-    <p>We use this information to create your account, deliver wallpapers you buy or save, and keep your coin balance.</p>
-    <h2>Payments</h2>
-    <p>Coin top-ups open a secure payment page. We may send your name, email, and order amount so the purchase can be completed. Card and other payment details are entered on that page and are not stored on our servers. Coins are added to your account after payment is confirmed.</p>
-    <h2>Storage</h2>
-    <p>Account and purchase records are stored on our servers. Session tokens are stored on your device.</p>
-    <h2>Sharing</h2>
-    <p>We do not sell personal data. We do not share it with advertisers.</p>
-    <h2>Your choices</h2>
-    <p>You can log out in Profile. To delete an account, email the developer listed on the Play Store listing.</p>
-    <h2>Contact</h2>
-    <p>Questions: use the Play Store developer contact email.</p>
+    <header class="site-header">
+      <a class="brand" href="./">
+        <svg class="brand-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#7C8FFF" />
+              <stop offset="100%" stop-color="#B08CFF" />
+            </linearGradient>
+          </defs>
+          <rect width="64" height="64" rx="16" fill="url(#g)" />
+          <rect x="14" y="18" width="36" height="28" rx="6" fill="#fff" opacity="0.95" />
+          <path d="M14 38l10-8 8 6 8-10 10 12" fill="none" stroke="#8B7CFF" stroke-width="3" stroke-linecap="round" />
+          <circle cx="24" cy="26" r="3" fill="#FFC93C" />
+        </svg>
+        Zastavka
+      </a>
+      <nav class="site-nav" aria-label="Legal">
+        <a href="./">Catalog</a>
+        <a class="is-active" href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+        <a href="delete-account.html">Delete account</a>
+      </nav>
+      <div class="header-actions">
+        <a class="btn btn-primary" href="./"><span>✦</span><span>Browse wallpapers</span></a>
+      </div>
+    </header>
+
+    <section class="page-hero">
+      <div class="page-hero-inner">
+        <div class="eyebrow">Wallpaper store</div>
+        <h1>Privacy Policy</h1>
+        <p class="meta">Last updated: 19 September 2026</p>
+        <p class="lede">
+          This Privacy Policy explains how Zastavka collects, uses, stores, and protects your personal information when
+          you visit our website, create an account, save or unlock wallpapers, top up coins, or use the Zastavka iOS and
+          Android apps.
+        </p>
+      </div>
+    </section>
+
+    <div class="legal-wrap">
+      <aside class="toc" aria-label="On this page">
+        <h2>On this page</h2>
+        <ol>
+          <li><a href="#who">Who we are</a></li>
+          <li><a href="#collect">Information we collect</a></li>
+          <li><a href="#use">How we use information</a></li>
+          <li><a href="#library">Saved wallpapers, coins, unlocks</a></li>
+          <li><a href="#share">Sharing</a></li>
+          <li><a href="#payments">Payments</a></li>
+          <li><a href="#cookies">Cookies and local storage</a></li>
+          <li><a href="#marketing">Communications</a></li>
+          <li><a href="#retention">How long we keep information</a></li>
+          <li><a href="#security">Security</a></li>
+          <li><a href="#transfers">International transfers</a></li>
+          <li><a href="#rights">Your rights</a></li>
+          <li><a href="#deletion">Account deletion</a></li>
+          <li><a href="#children">Children</a></li>
+          <li><a href="#third-parties">Third-party links</a></li>
+          <li><a href="#public">Public content and sharing</a></li>
+          <li><a href="#legal">Legal requirements</a></li>
+          <li><a href="#permissions">Device permissions</a></li>
+          <li><a href="#stores">App Store and Play summaries</a></li>
+          <li><a href="#changes">Changes</a></li>
+          <li><a href="#contact">Contact</a></li>
+        </ol>
+      </aside>
+
+      <article class="legal">
+        <h2 id="who">1. Who we are</h2>
+        <p>
+          Zastavka (“we”, “us”, “our”) operates a wallpaper store on the web and in mobile apps. You can browse the
+          catalog, keep a personal library of saved images, and unlock premium wallpapers with coins. The Service is
+          offered in English, Russian, and Chinese.
+        </p>
+        <ul>
+          <li>Website: <a href="https://silkrood.uz/zastavka/">https://silkrood.uz/zastavka/</a></li>
+          <li>iOS and Android apps published as <strong>Zastavka</strong></li>
+          <li>Application package / bundle ID: <code>com.zastavka.app</code></li>
+        </ul>
+        <p>
+          This policy applies to people who browse the catalog, create an account, save or unlock wallpapers, or top up
+          coins. The admin panel is an internal tool and is not offered to end users. By using Zastavka, you agree to
+          the practices described here. If you do not agree, do not create an account or use paid features.
+        </p>
+        <p>
+          Related documents: <a href="terms.html">Terms of Use</a> and
+          <a href="delete-account.html">account deletion</a>.
+        </p>
+
+        <h2 id="collect">2. Information we collect</h2>
+        <p>
+          We collect information you give us, information created when you use the Service, and information needed to
+          complete a coin top-up. We only collect what we need to run a wallpaper store.
+        </p>
+        <h3>Account information you provide</h3>
+        <ul>
+          <li>Name</li>
+          <li>Email address</li>
+          <li>Password (stored only as a one-way hash; we cannot read the original password)</li>
+        </ul>
+        <h3>App and website activity</h3>
+        <ul>
+          <li>Saved / favorite wallpaper IDs</li>
+          <li>Unlocked wallpaper IDs and purchase history (wallpaper, price in coins, time)</li>
+          <li>Coin balance</li>
+          <li>Coin top-up records: amount, currency, status, time, and a payment session or order id</li>
+        </ul>
+        <h3>Technical information</h3>
+        <ul>
+          <li>A session token stored on your device after you sign in</li>
+          <li>Language preference stored on your device (English, Russian, or Chinese)</li>
+          <li>
+            Short-lived server logs (IP address, date, requested URL, user-agent) used to keep the Service running and
+            to investigate abuse
+          </li>
+        </ul>
+        <h3>Payment-related information</h3>
+        <p>
+          Coin top-up opens Buy Me a Coffee. We send your name, email,
+          and the order amount so the payment can be completed. Card numbers, crypto wallet keys, and other
+          payment-instrument details are entered on the provider’s page. We do not store full card numbers, CVV, or
+          wallet seeds on Zastavka servers.
+        </p>
+        <h3>Information we do not collect</h3>
+        <ul>
+          <li>Precise location or GPS</li>
+          <li>Your contacts, or photos from your library (except a wallpaper file you choose to save or share)</li>
+          <li>Advertising IDs for ads — we do not run third-party advertising SDKs</li>
+          <li>Health data, financial-account logins, or government IDs</li>
+        </ul>
+
+        <h2 id="use">3. How we use your information</h2>
+        <p>We use personal information to provide and improve the Service. That includes using it to:</p>
+        <ul>
+          <li>Create your account and authenticate sign-in</li>
+          <li>Show the catalog, keep favorites, unlock wallpapers, and maintain your coin balance</li>
+          <li>Start a checkout session and credit coins after payment is confirmed</li>
+          <li>Prevent fraud, abuse, and unauthorized access</li>
+          <li>Comply with law, including tax or dispute records where required</li>
+          <li>Answer support, privacy, or deletion requests</li>
+        </ul>
+        <p>
+          We do not use your data to build advertising profiles. We do not sell personal data. We do not use the data
+          for tracking across other companies’ apps or websites.
+        </p>
+        <h3>Legal bases (where GDPR / UK GDPR applies)</h3>
+        <ul>
+          <li>Contract: account, catalog, purchases, coin balance</li>
+          <li>Legitimate interests: security logs, abuse prevention, service reliability</li>
+          <li>Consent: optional device features such as sharing a downloaded wallpaper through the system share sheet</li>
+          <li>Legal obligation: records we must keep under applicable law</li>
+        </ul>
+
+        <h2 id="library">4. Saved wallpapers, coins, and unlocks</h2>
+        <p>
+          When you save a wallpaper, unlock an image, or hold coins, we store those records against your account so the
+          library follows you across the website and the apps. That content exists so you can reopen favorites, keep
+          access to images you unlocked, and spend coins inside Zastavka.
+        </p>
+        <p>
+          Unlocked wallpapers are licensed for personal use on devices you own or control. Saving or unlocking an image
+          does not transfer ownership of the artwork to you. We and our licensors keep the intellectual property in the
+          catalog.
+        </p>
+        <p>
+          Coins are an in-Service balance. They are not cash, cryptocurrency, or a stored-value instrument you can
+          withdraw. Details of how coins work are in the <a href="terms.html">Terms of Use</a>.
+        </p>
+
+        <h2 id="share">5. Sharing your information</h2>
+        <p>We share personal information only when it is needed to run the Service:</p>
+        <ul>
+          <li>
+            <strong>Buy Me a Coffee:</strong> name, email, order amount, and the order id in the coffee message so a
+            coin top-up can be matched. Card and other payment-instrument data stays with Buy Me a Coffee.
+          </li>
+          <li>
+            <strong>Hosting:</strong> the app, website, and database run on our cloud server. The host processes data
+            only to store and deliver the Service.
+          </li>
+          <li>
+            <strong>Authorities:</strong> if required by law, or to protect users from fraud or harm.
+          </li>
+        </ul>
+        <p>
+          We do not share data with advertisers, data brokers, or social networks for their marketing. We do not sell
+          personal information. We do not sell wallpaper files from your library.
+        </p>
+
+        <h2 id="payments">6. Payments</h2>
+        <p>
+          Payments for coin packs are processed through <strong>Buy Me a Coffee</strong>
+          (<a href="https://www.buymeacoffee.com/admin09wet">buymeacoffee.com/admin09wet</a>). When you tap Pay, Zastavka
+          opens that Buy Me a Coffee checkout (in the system browser on iOS and Android). Buy Me a Coffee may collect
+          and process payment details under its own privacy and security policy, which you should read on that page
+          before you pay.
+        </p>
+        <p>
+          Zastavka does not store full credit or debit card numbers. We keep a limited order record (amount, currency,
+          status, time, and an order id) so we can credit coins after a signed Buy Me a Coffee webhook and handle
+          disputes.
+        </p>
+
+        <h2 id="cookies">7. Cookies, local storage, and similar technologies</h2>
+        <p>
+          Zastavka is a wallpaper store, not an advertising network. We use essential storage on your device so the
+          Service works. We do not use advertising cookies, retargeting pixels, or third-party analytics cookies.
+        </p>
+        <p>On your device we may store:</p>
+        <ul>
+          <li><strong>Session token</strong> — keeps you signed in until you log out or we revoke the session</li>
+          <li><strong>Language</strong> — remembers English, Russian, or Chinese</li>
+        </ul>
+        <p>
+          These values typically live in local storage (or an equivalent app store on iOS/Android), not in advertising
+          cookies. The Buy Me a Coffee checkout page may set its own cookies; those are controlled by Buy Me a Coffee, not
+          by Zastavka. Server logs described above are kept on our host for a short time.
+        </p>
+        <p>
+          You can clear site data in your browser, or log out in Profile, which removes the session we issued. Clearing
+          local storage signs you out and may reset language to the default until you choose again. Deleting the app
+          removes local app data on that device; it does not delete your account on our servers.
+        </p>
+
+        <h2 id="marketing">8. Communications</h2>
+        <p>
+          We do not run an advertising SDK and we do not send promotional marketing campaigns from Zastavka. We may
+          still send or display service messages that are needed to operate your account — for example, a checkout
+          confirmation from Buy Me a Coffee, or a response to a deletion or support request.
+        </p>
+        <p>
+          If we ever introduce optional product emails, we will ask for permission where the law requires it, and you
+          will be able to opt out of marketing without losing service notices that are required to run the account.
+        </p>
+
+        <h2 id="retention">9. How long we keep information</h2>
+        <p>We keep personal information only as long as reasonably needed for the purposes in this policy.</p>
+        <ul>
+          <li>Account, favorites, unlocks, and coin balance: until you delete the account</li>
+          <li>
+            Payment / top-up records: kept with the account and deleted with it, unless a law requires a limited
+            financial record
+          </li>
+          <li>Session token: until you log out, or when we revoke it</li>
+          <li>Server logs: typically up to 30 days, unless needed longer to investigate an incident</li>
+        </ul>
+        <p>
+          After a valid deletion request we delete or irreversibly anonymize account data. We do not “freeze” an
+          account instead of deleting it.
+        </p>
+
+        <h2 id="security">10. Security</h2>
+        <p>
+          We use HTTPS in transit, hashed passwords, and access controls on the server. We take reasonable technical
+          and organizational steps to protect personal information against loss, misuse, unauthorized access,
+          disclosure, alteration, or destruction.
+        </p>
+        <p>
+          No website, app, or data transmission is completely secure. You are responsible for keeping your password
+          private and for using a device you trust.
+        </p>
+
+        <h2 id="transfers">11. International transfers</h2>
+        <p>
+          The Service is hosted on a server that may be outside your country. If you use Zastavka from the EU, the UK,
+          or another region, your data is transferred to that host in order to provide the Service. Where required, we
+          take reasonable steps to protect information in line with applicable privacy laws.
+        </p>
+
+        <h2 id="rights">12. Your rights</h2>
+        <p>Depending on where you live, you may have rights over your personal information, including the right to:</p>
+        <ul>
+          <li>Access the data we hold about your account</li>
+          <li>Correct inaccurate name or email</li>
+          <li>Delete your account and associated data</li>
+          <li>Export a copy of account data we hold</li>
+          <li>Object to or restrict certain processing</li>
+          <li>Withdraw consent for optional device features by not using them</li>
+        </ul>
+        <p>
+          You can log out at any time in Profile. You can save or remove favorites in the app or on the website. To
+          make a privacy request, use the <a href="delete-account.html">account deletion page</a> or the developer
+          contact email shown on the Google Play and App Store listing for Zastavka. We may need to verify that you
+          control the account email before we respond.
+        </p>
+
+        <h2 id="deletion">13. Account and data deletion</h2>
+        <p>
+          If you created an account, you can request deletion in both of these ways (required for apps that offer
+          account creation):
+        </p>
+        <div class="callout">
+          <strong>How to delete</strong>
+          <ul>
+            <li><strong>In the app:</strong> Profile → Delete account. This permanently deletes the signed-in account.</li>
+            <li>
+              <strong>On the web (no app install needed):</strong>
+              <a href="https://silkrood.uz/zastavka/delete-account.html">Delete your Zastavka account</a>
+            </li>
+          </ul>
+        </div>
+        <p>
+          What we delete: name, email, password hash, session tokens, favorites, coin balance, wallpaper unlocks tied
+          to the account, and top-up records tied to the account.
+        </p>
+        <p>
+          What we may retain for a limited time if required by law: a non-identifying payment reference needed for
+          accounting or dispute handling. We aim to complete deletion within 7 days (usually immediately when you
+          confirm in-app or submit the web form with the account email).
+        </p>
+        <p>Deleting the app from your phone does not delete the account. Use in-app delete or the web page.</p>
+
+        <h2 id="children">14. Children’s privacy</h2>
+        <p>
+          Zastavka is a general wallpaper store. It is not directed at children under 13, or the equivalent minimum age
+          in your country. We do not knowingly collect personal information from children. If you believe a child
+          created an account, use the <a href="delete-account.html">deletion page</a> and we will delete it.
+        </p>
+
+        <h2 id="third-parties">15. Third-party links and services</h2>
+        <p>
+          The Service may open Buy Me a Coffee, system share sheets, or store listings operated by others. We
+          are not responsible for the privacy practices, content, or security of third-party websites or services. You
+          should read their policies before providing information to them.
+        </p>
+
+        <h2 id="public">16. Public content, reviews, and sharing</h2>
+        <p>
+          Zastavka does not publish a public social feed of your saved wallpapers. If you post a review, screenshot, or
+          comment about Zastavka on an app store or another public platform, that content is visible according to that
+          platform’s rules.
+        </p>
+        <p>
+          If you use the system share sheet to send a wallpaper you already unlocked, the destination app (Messages,
+          Photos, and so on) handles that share under its own policy. We do not scan your camera roll.
+        </p>
+
+        <h2 id="legal">17. Legal requirements</h2>
+        <p>We may use or disclose personal information if we believe it is reasonably necessary to:</p>
+        <ul>
+          <li>Comply with applicable law or legal process</li>
+          <li>Respond to lawful requests from authorities</li>
+          <li>Protect our rights, customers, property, or the Service</li>
+          <li>Investigate fraud, security issues, abuse, or violations of the Terms of Use</li>
+          <li>Enforce agreements or resolve disputes</li>
+        </ul>
+
+        <h2 id="permissions">18. Device permissions</h2>
+        <p>
+          The mobile apps may use the system share sheet so you can save a wallpaper you already unlocked. Photo
+          library access, if requested by the operating system, is only to store a wallpaper you downloaded. We do not
+          scan your camera roll, read your contacts, or track precise location.
+        </p>
+
+        <h2 id="stores">19. Apple App Store and Google Play summaries</h2>
+        <h3>Apple privacy labels</h3>
+        <ul>
+          <li>Contact Info: name, email — used for the account, linked to your identity</li>
+          <li>Purchases: coin top-up and wallpaper unlock records — used for app functionality</li>
+          <li>User Content: saved wallpaper list — used for app functionality</li>
+          <li>Identifiers: account id / session token — used for account</li>
+          <li>Not used for tracking. Not used for third-party advertising.</li>
+        </ul>
+        <h3>Google Play Data safety</h3>
+        <ul>
+          <li>Collected: name, email, app activity (saves, unlocks, coin top-ups)</li>
+          <li>Shared: name, email, and order amount with Buy Me a Coffee to complete checkout</li>
+          <li>Purpose: app functionality, account management, payments</li>
+          <li>Encrypted in transit: yes (HTTPS)</li>
+          <li>Users can request deletion: yes, in-app and at the web URL above</li>
+          <li>Data is not sold. Data is not used for ads.</li>
+        </ul>
+
+        <h2 id="changes">20. Changes to this Privacy Policy</h2>
+        <p>
+          We may update this Privacy Policy from time to time. The latest version will be posted on this page with a
+          new “Last updated” date. If we make important changes, we may provide additional notice where required by
+          law. Continued use of Zastavka after an update is posted means you accept the revised policy.
+        </p>
+
+        <h2 id="contact">21. Contact us</h2>
+        <p>
+          For questions about this Privacy Policy, how we handle personal information, or to request deletion, use the
+          <a href="delete-account.html">account deletion page</a> or the developer contact email shown on the Google
+          Play and App Store listing for Zastavka.
+        </p>
+        <p>
+          Service: <a href="https://silkrood.uz/zastavka/">https://silkrood.uz/zastavka/</a><br />
+          Package: <code>com.zastavka.app</code>
+        </p>
+      </article>
+    </div>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-grid">
+          <div>
+            <a class="footer-brand" href="./">
+              <svg class="brand-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+                <rect width="64" height="64" rx="16" fill="#8B7CFF" />
+                <rect x="14" y="18" width="36" height="28" rx="6" fill="#fff" opacity="0.95" />
+              </svg>
+              Zastavka
+            </a>
+            <p>A wallpaper store for phones and the web. Browse, save, and unlock images for screens you actually use.</p>
+          </div>
+          <div>
+            <h3>Support</h3>
+            <a href="privacy.html">Privacy Policy</a>
+            <a href="terms.html">Terms of Use</a>
+            <a href="delete-account.html">Delete account</a>
+          </div>
+          <div>
+            <h3>Product</h3>
+            <a href="./">Catalog</a>
+            <a href="https://silkrood.uz/zastavka/">Website</a>
+            <span>EN / RU / ZH</span>
+          </div>
+          <div>
+            <h3>App</h3>
+            <p style="margin: 0; font-size: 14px">Package <code style="color: #fff">com.zastavka.app</code></p>
+          </div>
+        </div>
+        <p class="copyright">© 2026 Zastavka. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <div class="cookie-bar" id="cookie-bar" hidden>
+      <p>
+        Zastavka uses essential local storage to keep you signed in and remember language. We do not use advertising
+        cookies.
+      </p>
+      <button class="btn btn-primary" type="button" id="cookie-ok">OK</button>
+    </div>
+    <script>
+      if (window.self !== window.top) document.documentElement.classList.add("embedded");
+      const bar = document.getElementById("cookie-bar");
+      try {
+        if (!localStorage.getItem("zastavka_cookie_notice")) bar.hidden = false;
+      } catch (_) {}
+      document.getElementById("cookie-ok").addEventListener("click", () => {
+        try {
+          localStorage.setItem("zastavka_cookie_notice", "1");
+        } catch (_) {}
+        bar.hidden = true;
+      });
+    </script>
   </body>
 </html>

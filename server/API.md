@@ -1,11 +1,13 @@
 # Zastavka API
 
-Base URL: `https://130.61.247.126.sslip.io/zastavka-api`
+Base URL: `https://silkrood.uz/zastavka-api`
 
 Interactive docs: **[/zastavka-api/docs](/zastavka-api/docs)**  
 OpenAPI JSON: **[/zastavka-api/openapi.json](/zastavka-api/openapi.json)**
 
 Admin default password: `ZastavkaAdmin!` (override with `ADMIN_PASSWORD`).
+
+Coin top-up: Buy Me a Coffee. Webhook: `POST /webhooks/bmc` (also `POST /topup/callback`). Header `x-signature-sha256`.
 
 ## Public
 
@@ -15,6 +17,7 @@ Admin default password: `ZastavkaAdmin!` (override with `ADMIN_PASSWORD`).
 | GET | `/wallpapers?q=` | List wallpapers (optional search) |
 | GET | `/wallpapers/:id` | One wallpaper |
 | GET | `/uploads/:file` | Uploaded image file |
+| POST | `/webhooks/bmc` | Buy Me a Coffee webhook |
 
 ## User (Bearer token)
 
@@ -25,7 +28,8 @@ Admin default password: `ZastavkaAdmin!` (override with `ADMIN_PASSWORD`).
 | GET | `/me` | Current user |
 | PATCH | `/me` | Update `{ saved: string[] }` |
 | POST | `/purchases` | Buy `{ wallpaperId }` |
-| POST | `/topup` | Add coins `{ coins, usd }` |
+| POST | `/topup` | Open BMC checkout `{ coins, usd }` |
+| GET | `/topup/status` | `{ orderId }` or `{ sessionId }` |
 
 ## Admin (Bearer token from `/admin/login`)
 
@@ -39,5 +43,7 @@ Admin default password: `ZastavkaAdmin!` (override with `ADMIN_PASSWORD`).
 | POST | `/admin/wallpapers` | multipart: `file`, `title`, `price`, `tall` |
 | PATCH | `/admin/wallpapers/:id` | Edit title/price/file |
 | DELETE | `/admin/wallpapers/:id` | Delete wallpaper |
+| GET/PUT | `/admin/bmc` | Buy Me a Coffee tokens and extras |
+| GET | `/admin/topups` | Coin top-up orders |
 
 Auth header: `Authorization: Bearer <token>`

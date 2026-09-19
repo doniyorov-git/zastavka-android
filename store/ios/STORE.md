@@ -4,8 +4,9 @@ Bundle ID: `com.zastavka.app`
 Version: `1.0.0`  
 Category: Photo & Video  
 Secondary: Lifestyle  
-Age rating: 4+  
+Age rating: 4+ (not directed at children under 13)  
 Default language: English  
+Devices: **iPhone only** (no iPad screenshots required)
 
 ## Name and text
 
@@ -19,47 +20,52 @@ wallpaper,wallpapers,coins,background,lock screen,gallery,favorites
 **Description:**
 Zastavka is a wallpaper store. Browse a daily catalog, save images you like, and unlock premium wallpapers with coins.
 
-Create an account with email and password, keep a saved collection, and top up coins through a secure checkout. The app is available in English, Russian, and Chinese.
+Create an account with email and password, keep a saved collection, and top up coins through Buy Me a Coffee. The app is available in English, Russian, and Chinese.
 
 Features:
 • Fresh wallpaper catalog
 • Coin balance and premium unlocks
 • Saved favorites
-• Secure hosted payments
+• Buy Me a Coffee payments
 • Light, full-screen design
 
-Privacy: https://130.61.247.126.sslip.io/zastavka/privacy.html
-Terms: https://130.61.247.126.sslip.io/zastavka/terms.html
-Support: https://130.61.247.126.sslip.io/zastavka/
+Privacy: https://silkrood.uz/zastavka/privacy.html
+Terms: https://silkrood.uz/zastavka/terms.html
+Support: https://silkrood.uz/zastavka/
+Account deletion: https://silkrood.uz/zastavka/delete-account.html
 
 ## Screenshots
 
-Apple requires iPhone 6.7" (and 6.5" is recommended). PNG, no alpha.
+Full-bleed mobile UI, no device mockup or bezel. PNG, 24-bit, no alpha.
 
-- 6.7" (1290×2796): `store/ios/screenshots/6.7/`
-- 6.5" (1284×2778): `store/ios/screenshots/6.5/`
+- 16:9 landscape 1920×1080 (at least 3): `store/ios/screenshots/16x9/`
+  1. `05-home.png` catalog
+  2. `07-profile.png` profile
+  3. `08-topup.png` Buy Me a Coffee top-up
+- Optional iPhone portrait:
+  - 6.7" (1290×2796): `store/ios/screenshots/6.7/`
+  - 6.5" (1284×2778): `store/ios/screenshots/6.5/`
 
-Upload at least 3 iPhone screenshots (onboarding, catalog, profile/top-up).
-
-App icon: `play/icon-1024.png` (1024×1024, no alpha, no rounded corners)
+App icon: `store/ios/icon-1024.png` (1024×1024, no alpha, no rounded corners)
 
 ## App Review
 
 Review notes:
 - Demo login: aziz.karimov@gmail.com / aziz123
-- Admin is not part of the iOS app
-- Coin top-up opens a hosted payment page. Use the demo login above to review the catalog and profile.
-
-Contact / privacy / support URLs must be HTTPS (already are).
+- Admin is not part of the iOS app (web: https://silkrood.uz/zastavka-admin/ password `ZastavkaAdmin!`)
+- Coin top-up opens Buy Me a Coffee in the in-app browser
+- Account deletion: Profile → Delete account
 
 ## Privacy nutrition labels
 
-- Contact Info: name, email — used for account
+- Contact Info: name, email — account
 - Purchases: coin top-up records
 - User Content: saved wallpapers
-- Linked to identity: yes, for the account
+- Identifiers: account / session
+- Linked to identity: yes
 - Used for tracking: no
+- Used for third-party ads: no
 
 ## Payments note
 
-Coins unlock digital wallpapers. Checkout opens a secure payment page outside the app.
+Coins unlock digital wallpapers. Checkout opens Buy Me a Coffee (buymeacoffee.com/admin09wet) outside the app UI.

@@ -161,8 +161,17 @@ export function initDb() {
       created_at TEXT,
       updated_at TEXT
     );
+    CREATE TABLE IF NOT EXISTS webhook_events (
+      event_id TEXT PRIMARY KEY,
+      created_at TEXT
+    );
     CREATE INDEX IF NOT EXISTS idx_topups_session ON topups(session_id);
   `);
+  try {
+    db.exec("ALTER TABLE topups ADD COLUMN extra_id TEXT");
+  } catch {
+    /* already exists */
+  }
 
   if (fs.existsSync(JSON_FILE)) {
     migrateJson();
@@ -202,6 +211,13 @@ export function initDb() {
        VALUES (?, ?, ?, ?, ?, ?, ?, ?)`
     ).run("p-seed", "u-aziz", "Aziz", "aziz.karimov@gmail.com", "w8", "Soft gradient", 30, now);
   }
+
+  const origin = getSetting("public_origin", "");
+  if (!origin || /sslip\.io|130\.61\.247\.126/.test(origin)) {
+    setSetting("public_origin", "https://silkrood.uz");
+  }
+  if (!getSetting("bmc_username")) setSetting("bmc_username", "admin09wet");
+  if (!getSetting("bmc_page_url")) setSetting("bmc_page_url", "https://www.buymeacoffee.com/admin09wet");
 }
 
 function migrateJson() {
@@ -342,6 +358,24 @@ export function saveUser(user) {
   return findUserById(user.id);
 }
 
+export function deleteUserAccount(userId) {
+  const id = String(userId || "");
+  if (!id) return false;
+  const user = findUserById(id);
+  if (!user) return false;
+  db.prepare("DELETE FROM sessions WHERE user_id = ?").run(id);
+  db.prepare("DELETE FROM purchases WHERE user_id = ?").run(id);
+  db.prepare("DELETE FROM topups WHERE user_id = ?").run(id);
+  db.prepare("DELETE FROM users WHERE id = ?").run(id);
+  return true;
+}
+
+export function deleteUserAccountByEmail(email) {
+  const user = findUserByEmail(email);
+  if (!user) return false;
+  return deleteUserAccount(user.id);
+}
+
 export function listUsers() {
   const users = db.prepare("SELECT * FROM users ORDER BY created_at DESC").all().map(mapUser);
   const counts = db.prepare("SELECT user_id, COUNT(*) AS n FROM purchases GROUP BY user_id").all();
@@ -409,20 +443,16 @@ export function setSetting(key, value) {
   ).run(key, String(value ?? ""));
 }
 
-export function getSpayonSettings() {
-  const methodsRaw = getSetting("spayon_methods", "visamaster");
+export function getBmcSettings() {
   return {
-    env: getSetting("spayon_env", "sandbox"),
-    clientId: getSetting("spayon_client_id"),
-    clientSecret: getSetting("spayon_client_secret"),
-    callbackSecret: getSetting("spayon_callback_secret"),
-    currency: getSetting("spayon_currency", "USD"),
-    defaultMethod: getSetting("spayon_default_method", "visamaster"),
-    methods: methodsRaw
-      .split(",")
-      .map((item) => item.trim())
-      .filter(Boolean),
-    publicOrigin: getSetting("public_origin", "https://130.61.247.126.sslip.io"),
+    username: getSetting("bmc_username", "admin09wet"),
+    pageUrl: getSetting("bmc_page_url", "https://www.buymeacoffee.com/admin09wet"),
+    accessToken: getSetting("bmc_access_token"),
+    webhookSecret: getSetting("bmc_webhook_secret"),
+    extraId100: getSetting("bmc_extra_100"),
+    extraId300: getSetting("bmc_extra_300"),
+    extraId750: getSetting("bmc_extra_750"),
+    publicOrigin: getSetting("public_origin", "https://silkrood.uz"),
   };
 }
 
@@ -432,47 +462,57 @@ function maskSecret(value) {
   return `••••${value.slice(-4)}`;
 }
 
-export function publicSpayonSettings() {
-  const cfg = getSpayonSettings();
+export function publicBmcSettings() {
+  const cfg = getBmcSettings();
   const origin = cfg.publicOrigin.replace(/\/$/, "");
+  const username = cfg.username || "admin09wet";
   return {
-    env: cfg.env,
-    clientId: cfg.clientId,
-    clientSecretSet: Boolean(cfg.clientSecret),
-    clientSecretMask: maskSecret(cfg.clientSecret),
-    callbackSecretSet: Boolean(cfg.callbackSecret),
-    callbackSecretMask: maskSecret(cfg.callbackSecret),
-    currency: cfg.currency,
-    defaultMethod: cfg.defaultMethod,
-    methods: cfg.methods,
+    username,
+    pageUrl: cfg.pageUrl || `https://www.buymeacoffee.com/${username}`,
+    accessTokenSet: Boolean(cfg.accessToken),
+    accessTokenMask: maskSecret(cfg.accessToken),
+    webhookSecretSet: Boolean(cfg.webhookSecret),
+    webhookSecretMask: maskSecret(cfg.webhookSecret),
+    extraId100: cfg.extraId100,
+    extraId300: cfg.extraId300,
+    extraId750: cfg.extraId750,
     publicOrigin: origin,
+    webhookUrl: `${origin}/zastavka-api/webhooks/bmc`,
     callbackUrl: `${origin}/zastavka-api/topup/callback`,
     returnUrl: `${origin}/zastavka/?pay=return`,
     cancelUrl: `${origin}/zastavka/?pay=cancel`,
-    configured: Boolean(cfg.clientId && cfg.clientSecret && cfg.callbackSecret),
+    configured: Boolean((username || cfg.pageUrl) && cfg.webhookSecret),
+    checkoutReady: Boolean(username || cfg.pageUrl),
   };
 }
 
-export function saveSpayonSettings(body) {
-  if (body.env === "production" || body.env === "sandbox") setSetting("spayon_env", body.env);
-  if (body.clientId != null) setSetting("spayon_client_id", String(body.clientId).trim());
-  if (body.clientSecret) setSetting("spayon_client_secret", String(body.clientSecret).trim());
-  if (body.callbackSecret) setSetting("spayon_callback_secret", String(body.callbackSecret).trim());
-  if (body.currency) setSetting("spayon_currency", String(body.currency).trim().toUpperCase());
-  if (body.defaultMethod) setSetting("spayon_default_method", String(body.defaultMethod).trim());
-  if (Array.isArray(body.methods)) {
-    setSetting("spayon_methods", body.methods.map(String).join(","));
-  }
+export function saveBmcSettings(body) {
+  if (body.username != null) setSetting("bmc_username", String(body.username).replace(/^@/, "").trim());
+  if (body.pageUrl != null) setSetting("bmc_page_url", String(body.pageUrl).trim().replace(/\/$/, ""));
+  if (body.accessToken) setSetting("bmc_access_token", String(body.accessToken).trim());
+  if (body.webhookSecret) setSetting("bmc_webhook_secret", String(body.webhookSecret).trim());
+  if (body.extraId100 != null) setSetting("bmc_extra_100", String(body.extraId100).trim());
+  if (body.extraId300 != null) setSetting("bmc_extra_300", String(body.extraId300).trim());
+  if (body.extraId750 != null) setSetting("bmc_extra_750", String(body.extraId750).trim());
   if (body.publicOrigin != null) {
     setSetting("public_origin", String(body.publicOrigin).trim().replace(/\/$/, ""));
   }
-  return publicSpayonSettings();
+  return publicBmcSettings();
+}
+
+export function rememberWebhookEvent(eventId) {
+  if (!eventId) return false;
+  const info = db.prepare("INSERT OR IGNORE INTO webhook_events (event_id, created_at) VALUES (?, ?)").run(
+    String(eventId),
+    new Date().toISOString()
+  );
+  return info.changes === 0;
 }
 
 export function createTopup(row) {
   db.prepare(
-    `INSERT INTO topups (id, user_id, coins, amount, currency, session_id, order_id, status, created_at, updated_at)
-     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
+    `INSERT INTO topups (id, user_id, coins, amount, currency, session_id, order_id, extra_id, status, created_at, updated_at)
+     VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`
   ).run(
     row.id,
     row.userId,
@@ -481,6 +521,7 @@ export function createTopup(row) {
     row.currency,
     row.sessionId || null,
     row.orderId,
+    row.extraId || null,
     row.status,
     row.createdAt,
     row.updatedAt
@@ -505,8 +546,8 @@ export function updateTopup(id, fields) {
   if (!item) return null;
   const next = { ...item, ...fields, updatedAt: new Date().toISOString() };
   db.prepare(
-    "UPDATE topups SET session_id=?, status=?, updated_at=? WHERE id=?"
-  ).run(next.sessionId || null, next.status, next.updatedAt, id);
+    "UPDATE topups SET session_id=?, extra_id=?, status=?, updated_at=? WHERE id=?"
+  ).run(next.sessionId || null, next.extraId || null, next.status, next.updatedAt, id);
   return getTopupById(id);
 }
 
@@ -514,15 +555,31 @@ export function listTopups() {
   return db.prepare("SELECT * FROM topups ORDER BY created_at DESC LIMIT 200").all().map(mapTopup);
 }
 
+export function listPendingTopups() {
+  return db
+    .prepare(
+      `SELECT t.*, u.email AS user_email
+       FROM topups t
+       LEFT JOIN users u ON u.id = t.user_id
+       WHERE t.status = 'pending'
+       ORDER BY t.created_at DESC
+       LIMIT 200`
+    )
+    .all()
+    .map(mapTopup);
+}
+
 function mapTopup(row) {
   if (!row) return null;
   return {
     id: row.id,
     userId: row.user_id,
+    userEmail: row.user_email || "",
     coins: row.coins,
     amount: row.amount,
     currency: row.currency,
     sessionId: row.session_id,
+    extraId: row.extra_id || "",
     orderId: row.order_id,
     status: row.status,
     createdAt: row.created_at,
@@ -532,13 +589,16 @@ function mapTopup(row) {
 
 export function applyPaidTopup(topup) {
   if (!topup) return null;
-  if (topup.status === "paid") return { topup, alreadyPaid: true };
-  const user = findUserById(topup.userId);
-  if (!user) return null;
   const apply = db.transaction(() => {
-    user.coins += topup.coins;
+    const current = getTopupById(topup.id);
+    if (!current) return null;
+    if (current.status === "paid") return { topup: current, alreadyPaid: true, user: findUserById(current.userId) };
+    const user = findUserById(current.userId);
+    if (!user) return null;
+    user.coins += current.coins;
     saveUser(user);
-    return updateTopup(topup.id, { sessionId: topup.sessionId, status: "paid" });
+    const paid = updateTopup(current.id, { sessionId: topup.sessionId || current.sessionId, status: "paid" });
+    return { topup: paid, alreadyPaid: false, user: findUserById(user.id) };
   });
-  return { topup: apply(), alreadyPaid: false, user: findUserById(user.id) };
+  return apply();
 }

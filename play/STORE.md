@@ -5,12 +5,11 @@ Version: `1.0.0` (versionCode 1)
 Category: Personalization  
 Content rating: Everyone / PEGI 3  
 Default language: English  
+Target audience: 13+ (not directed at children)
 
 ## Phone install (debug)
 
 `play/Zastavka-1.0.0-debug.apk`
-
-Also: `android/app/build/outputs/apk/debug/app-debug.apk`
 
 ## Play upload (release AAB)
 
@@ -47,45 +46,57 @@ Wallpaper store with coins, favorites, and a clean light design.
 **Full description:**
 Zastavka is a wallpaper store. Browse a daily catalog, save images you like, and unlock premium wallpapers with coins.
 
-Create an account with email and password, keep a saved collection, and top up coins through a secure checkout. The app is available in English, Russian, and Chinese.
+Create an account with email and password, keep a saved collection, and top up coins through Buy Me a Coffee. The app is available in English, Russian, and Chinese.
 
 Features:
 • Fresh wallpaper catalog
 • Coin balance and premium unlocks
 • Saved favorites
-• Secure hosted payments
+• Buy Me a Coffee payments
 • Light, full-screen design
 
-Privacy policy: https://130.61.247.126.sslip.io/zastavka/privacy.html
-Terms: https://130.61.247.126.sslip.io/zastavka/terms.html
+Privacy policy: https://silkrood.uz/zastavka/privacy.html
+Terms: https://silkrood.uz/zastavka/terms.html
+Account deletion: https://silkrood.uz/zastavka/delete-account.html
 
 ## Graphics
 
-- App icon: `play/icon-512.png` (512×512)
-- High-res icon: `play/icon-1024.png`
-- Feature graphic: `play/feature-graphic.png` (1024×500)
-- Phone screenshots (1080×1920, 2–8 images): `play/screenshots/`
+JPEG or 24-bit PNG, no alpha.
 
-1. `01-onboarding.png`
-2. `02-onboarding-coins.png`
-3. `03-login.png`
-4. `04-register.png`
-5. `05-home.png`
-6. `06-saved.png`
-7. `07-profile.png`
-8. `08-topup.png`
+- App icon: `play/icon-512.png` (512×512, 24-bit PNG)
+- Feature graphic / banner: `play/feature-graphic.png` (1024×500, no alpha)
+- Phone 16:9 landscape (1920×1080, at least 3, full-bleed mobile UI, no device frame): `play/screenshots-16x9/`
+- Optional portrait phone (1080×1920): `play/screenshots/`
 
-## Data safety
+16:9 upload order (minimum 3):
+
+1. `05-home.png` — catalog
+2. `07-profile.png` — profile
+3. `08-topup.png` — Buy Me a Coffee top-up
+4. `01-onboarding.png` — onboarding (extra)
+
+## Data safety (Play Console)
 
 - Collected: name, email, app activity (saves, wallpaper unlocks, coin top-ups)
-- Shared: name, email, and order amount with the payment processor to complete checkout
-- Purpose: app functionality, account, payments
+- Shared: name, email, and order amount with Buy Me a Coffee to complete checkout
+- Purpose: app functionality, account management, payments
 - Encrypted in transit: yes (HTTPS)
-- Users can request deletion: yes, via developer email
+- Sold: no
+- Used for ads / tracking: no
+- Users can request deletion: yes
+  - In-app: Profile → Delete account
+  - Web: https://silkrood.uz/zastavka/delete-account.html
+
+## Account deletion (required)
+
+Play Console → App content → Data safety / Account deletion URL:
+
+`https://silkrood.uz/zastavka/delete-account.html`
 
 ## Live URLs
 
-- Store: https://130.61.247.126.sslip.io/zastavka/
-- Admin: https://130.61.247.126.sslip.io/zastavka-admin/
-- API: https://130.61.247.126.sslip.io/zastavka-api/
-- Privacy: https://130.61.247.126.sslip.io/zastavka/privacy.html
+- Store: https://silkrood.uz/zastavka/
+- Admin: https://silkrood.uz/zastavka-admin/  (password `ZastavkaAdmin!`)
+- API: https://silkrood.uz/zastavka-api/
+- Privacy: https://silkrood.uz/zastavka/privacy.html
+- Demo login: `aziz.karimov@gmail.com` / `aziz123`

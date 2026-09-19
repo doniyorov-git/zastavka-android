@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="theme-color" content="#ffffff" />
+    <title>Delete your Zastavka account</title>
+    <meta
+      name="description"
+      content="Request deletion of a Zastavka wallpaper store account and the data linked to it."
+    />
+    <link rel="icon" type="image/svg+xml" href="favicon.svg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="legal.css" />
+  </head>
+  <body>
+    <header class="site-header">
+      <a class="brand" href="./">
+        <svg class="brand-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+          <defs>
+            <linearGradient id="g" x1="0" y1="0" x2="1" y2="1">
+              <stop offset="0%" stop-color="#7C8FFF" />
+              <stop offset="100%" stop-color="#B08CFF" />
+            </linearGradient>
+          </defs>
+          <rect width="64" height="64" rx="16" fill="url(#g)" />
+          <rect x="14" y="18" width="36" height="28" rx="6" fill="#fff" opacity="0.95" />
+          <path d="M14 38l10-8 8 6 8-10 10 12" fill="none" stroke="#8B7CFF" stroke-width="3" stroke-linecap="round" />
+          <circle cx="24" cy="26" r="3" fill="#FFC93C" />
+        </svg>
+        Zastavka
+      </a>
+      <nav class="site-nav" aria-label="Legal">
+        <a href="./">Catalog</a>
+        <a href="privacy.html">Privacy</a>
+        <a href="terms.html">Terms</a>
+        <a class="is-active" href="delete-account.html">Delete account</a>
+      </nav>
+      <div class="header-actions">
+        <a class="btn btn-ghost" href="privacy.html">Privacy Policy</a>
+      </div>
+    </header>
+
+    <section class="page-hero">
+      <div class="page-hero-inner">
+        <div class="eyebrow">Account</div>
+        <h1>Delete your Zastavka account</h1>
+        <p class="meta">Wallpaper store · package <code>com.zastavka.app</code></p>
+        <p class="lede">
+          This page is the public web way to request deletion of a Zastavka account and the data linked to it. You can
+          also delete from the app: <strong>Profile → Delete account</strong>.
+        </p>
+      </div>
+    </section>
+
+    <div class="legal-wrap" style="grid-template-columns: minmax(0, 1fr); max-width: 760px">
+      <article class="legal">
+        <h2>What we delete</h2>
+        <ul>
+          <li>Name, email, hashed password</li>
+          <li>Login sessions</li>
+          <li>Saved wallpapers, unlocks, and coin balance</li>
+          <li>Top-up records tied to the account</li>
+        </ul>
+        <p>
+          Deletion is permanent. We aim to complete it immediately when this form is submitted with the email on the
+          account (within 7 days at most). Deleting the app from your phone does not delete the account.
+        </p>
+        <p>Read the full <a href="privacy.html">Privacy Policy</a> and <a href="terms.html">Terms of Use</a>.</p>
+
+        <form class="form-card" id="form">
+          <label
+            >Account email
+            <input id="email" type="email" required autocomplete="email" placeholder="you@email.com" />
+          </label>
+          <button class="btn btn-danger" type="submit" style="width: 100%; margin-top: 18px; height: 48px">
+            Delete this account
+          </button>
+          <p id="msg"></p>
+        </form>
+      </article>
+    </div>
+
+    <footer class="site-footer">
+      <div class="footer-inner">
+        <div class="footer-grid">
+          <div>
+            <a class="footer-brand" href="./">
+              <svg class="brand-mark" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" aria-hidden="true">
+                <rect width="64" height="64" rx="16" fill="#8B7CFF" />
+                <rect x="14" y="18" width="36" height="28" rx="6" fill="#fff" opacity="0.95" />
+              </svg>
+              Zastavka
+            </a>
+            <p>A wallpaper store for phones and the web. Browse, save, and unlock images for screens you actually use.</p>
+          </div>
+          <div>
+            <h3>Support</h3>
+            <a href="privacy.html">Privacy Policy</a>
+            <a href="terms.html">Terms of Use</a>
+            <a href="delete-account.html">Delete account</a>
+          </div>
+          <div>
+            <h3>Product</h3>
+            <a href="./">Catalog</a>
+            <a href="https://silkrood.uz/zastavka/">Website</a>
+            <span>EN / RU / ZH</span>
+          </div>
+          <div>
+            <h3>App</h3>
+            <p style="margin: 0; font-size: 14px">Package <code style="color: #fff">com.zastavka.app</code></p>
+          </div>
+        </div>
+        <p class="copyright">© 2026 Zastavka. All rights reserved.</p>
+      </div>
+    </footer>
+
+    <script>
+      if (window.self !== window.top) document.documentElement.classList.add("embedded");
+      const form = document.getElementById("form");
+      const msg = document.getElementById("msg");
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+        msg.textContent = "Sending…";
+        msg.className = "";
+        try {
+          const res = await fetch("/zastavka-api/account/delete", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email: document.getElementById("email").value }),
+          });
+          const data = await res.json().catch(() => ({}));
+          if (!res.ok) throw new Error(data.error || "Request failed");
+          msg.className = "ok";
+          msg.textContent = "If that email had a Zastavka account, it has been deleted.";
+          form.reset();
+        } catch (err) {
+          msg.className = "err";
+          msg.textContent = err.message || "Could not complete the request.";
+        }
+      });
+    </script>
+  </body>
+</html>

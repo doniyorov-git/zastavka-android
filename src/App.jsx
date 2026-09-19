@@ -306,6 +306,17 @@ export default function App() {
     setTab("home");
   }
 
+  async function deleteAccount() {
+    if (!window.confirm(t("deleteAccountConfirm"))) return;
+    try {
+      await api("/me", { method: "DELETE" });
+      notify(t("toastAccountDeleted"));
+      logout();
+    } catch (err) {
+      notify(err.message);
+    }
+  }
+
   function goTab(next) {
     setTab(next);
   }
@@ -365,7 +376,9 @@ export default function App() {
                   coins={coins}
                   onTopUp={openTopUp}
                   onLogout={logout}
+                  onDeleteAccount={deleteAccount}
                   onOpenLang={() => setShowLang(true)}
+                  onOpenLegal={setShowLegal}
                 />
               )}
               <nav className="nav" aria-label={t("navMain")}>
@@ -653,7 +666,7 @@ function Saved({ items, purchased, saved, download, coinBtnRef, coins, onTopUp, 
   );
 }
 
-function Profile({ user, coins, onTopUp, onLogout, onOpenLang }) {
+function Profile({ user, coins, onTopUp, onLogout, onDeleteAccount, onOpenLang, onOpenLegal }) {
   const { t, lang } = useI18n();
   return (
     <section className="screen screen--scroll">
@@ -693,6 +706,25 @@ function Profile({ user, coins, onTopUp, onLogout, onOpenLang }) {
             <small>{t("themeLight")}</small>
           </span>
           <Icon name="chevron" size={18} />
+        </button>
+        <button className="settings-item" onClick={() => onOpenLegal("privacy")}>
+          <span className="ico">
+            <Icon name="globe" />
+          </span>
+          <span className="grow">
+            <span>{t("legalPrivacy")}</span>
+            <small>{t("privacyHint")}</small>
+          </span>
+          <Icon name="chevron" size={18} />
+        </button>
+        <button className="settings-item danger" onClick={onDeleteAccount}>
+          <span className="ico">
+            <Icon name="logout" />
+          </span>
+          <span className="grow">
+            <span>{t("deleteAccount")}</span>
+            <small>{t("deleteAccountHint")}</small>
+          </span>
         </button>
         <button className="settings-item danger" onClick={onLogout}>
           <span className="ico">

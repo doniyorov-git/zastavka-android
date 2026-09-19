@@ -141,6 +141,13 @@ html.native .screen--scroll {
   overflow: hidden;
 }
 
+@media (min-width: 1100px) {
+  .screen {
+    max-width: none;
+    padding: 20px 40px 24px;
+  }
+}
+
 .screen--scroll {
   overflow: auto;
   padding-bottom: calc(var(--nav-h) + 12px);
@@ -403,6 +410,22 @@ html.native .screen--scroll {
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: var(--gap);
+}
+
+@media (min-width: 1100px) {
+  .grid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+
+  .card-wall img {
+    aspect-ratio: 3 / 4;
+  }
+}
+
+@media (min-width: 1600px) {
+  .grid {
+    grid-template-columns: repeat(5, 1fr);
+  }
 }
 
 .card-wall {

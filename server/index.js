@@ -23,6 +23,8 @@ import {
   findUserById,
   createUser,
   saveUser,
+  deleteUserAccount,
+  deleteUserAccountByEmail,
   listUsers,
   addPurchase,
   listPurchases,
@@ -30,18 +32,24 @@ import {
   createSession,
   findSession,
   issueUserToken,
-  getSpayonSettings,
-  publicSpayonSettings,
-  saveSpayonSettings,
+  getBmcSettings,
+  publicBmcSettings,
+  saveBmcSettings,
+  rememberWebhookEvent,
   createTopup,
   getTopupById,
   getTopupByOrderId,
   getTopupBySessionId,
   updateTopup,
   listTopups,
-  applyPaidTopup,
 } from "./db.js";
-import { createPaymentSession, fetchSessionStatus, verifyCallbackSignature, invalidateSpayonToken } from "./spayon.js";
+import {
+  createBmcCheckout,
+  extraIdForCoins,
+  verifyBmcSignature,
+  applyBmcPayload,
+  reconcilePendingWithBmcApi,
+} from "./bmc.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const PORT = Number(process.env.PORT || 3050);
@@ -161,6 +169,22 @@ app.get(`${PREFIX}/me`, auth("user"), (req, res) => {
   res.json({ user: publicUser(req.user) });
 });
 
+app.delete(`${PREFIX}/me`, auth("user"), (req, res) => {
+  deleteUserAccount(req.user.id);
+  res.json({ ok: true, deleted: true });
+});
+
+app.post(`${PREFIX}/account/delete`, (req, res) => {
+  const email = String(req.body?.email || "")
+    .trim()
+    .toLowerCase();
+  if (!email || !email.includes("@")) {
+    return res.status(400).json({ error: "Enter the email on the account" });
+  }
+  deleteUserAccountByEmail(email);
+  res.json({ ok: true });
+});
+
 app.patch(`${PREFIX}/me`, auth("user"), (req, res) => {
   const user = req.user;
   if (Array.isArray(req.body?.saved)) {
@@ -200,31 +224,33 @@ app.post(`${PREFIX}/topup`, auth("user"), async (req, res) => {
   if (!Number.isFinite(coins) || coins < 1) {
     return res.status(400).json({ error: "Enter a coin amount" });
   }
-  const cfg = getSpayonSettings();
-  if (!cfg.clientId || !cfg.clientSecret || !cfg.callbackSecret) {
+  const cfg = getBmcSettings();
+  if (!cfg.username && !cfg.pageUrl) {
     return res.status(503).json({ error: "Payments are not configured yet" });
   }
   const amount = Number(req.body?.usd) || usdFromCoins(coins);
   const now = new Date().toISOString();
+  const extraId = extraIdForCoins(cfg, coins) || null;
   const topup = createTopup({
     id: uuid(),
     userId: req.user.id,
     coins,
     amount,
-    currency: cfg.currency || "USD",
+    currency: "USD",
     sessionId: null,
+    extraId,
     orderId: `zastavka-${req.user.id.slice(0, 8)}-${uuid().slice(0, 8)}`,
     status: "pending",
     createdAt: now,
     updatedAt: now,
   });
   try {
-    const session = await createPaymentSession({
-      topup,
-      user: req.user,
-      lang: String(req.body?.lang || "en"),
+    const session = await createBmcCheckout({ topup, user: req.user });
+    updateTopup(topup.id, {
+      sessionId: session.session_id,
+      extraId: session.extra_id || extraId,
+      status: session.status || "pending",
     });
-    updateTopup(topup.id, { sessionId: session.session_id, status: session.status || "pending" });
     res.json({
       sessionUrl: session.session_url,
       sessionId: session.session_id,
@@ -232,6 +258,7 @@ app.post(`${PREFIX}/topup`, auth("user"), async (req, res) => {
       status: "pending",
       coins,
       amount,
+      provider: "buymeacoffee",
     });
   } catch (err) {
     updateTopup(topup.id, { status: "failed" });
@@ -247,21 +274,9 @@ app.get(`${PREFIX}/topup/status`, auth("user"), async (req, res) => {
   if (!topup || topup.userId !== req.user.id) {
     return res.status(404).json({ error: "Payment not found" });
   }
-  if (topup.status !== "paid" && topup.sessionId) {
-    const remote = await fetchSessionStatus(topup.sessionId).catch(() => null);
-    const remoteStatus = String(remote?.status || "").toLowerCase();
-    if (remoteStatus === "paid") {
-      const applied = applyPaidTopup({ ...topup, sessionId: topup.sessionId });
-      return res.json({
-        status: "paid",
-        coins: topup.coins,
-        user: publicUser(applied?.user || findUserById(req.user.id)),
-      });
-    }
-    if (remoteStatus === "failed" || remoteStatus === "expired") {
-      updateTopup(topup.id, { status: remoteStatus });
-      topup = getTopupById(topup.id);
-    }
+  if (topup.status !== "paid") {
+    await reconcilePendingWithBmcApi().catch(() => []);
+    topup = getTopupById(topup.id);
   }
   res.json({
     status: topup.status,
@@ -272,27 +287,24 @@ app.get(`${PREFIX}/topup/status`, auth("user"), async (req, res) => {
   });
 });
 
-app.post(`${PREFIX}/topup/callback`, (req, res) => {
-  const cfg = getSpayonSettings();
-  const signature = req.headers["x-signature"];
+function handleBmcWebhook(req, res) {
+  const cfg = getBmcSettings();
+  const signature = req.headers["x-signature-sha256"] || req.headers["x-bmc-signature"] || req.headers["x-signature"];
   const raw = req.rawBody || Buffer.from(JSON.stringify(req.body || {}));
-  if (!verifyCallbackSignature(raw, signature, cfg.callbackSecret)) {
+  if (!verifyBmcSignature(raw, signature, cfg.webhookSecret)) {
     return res.status(401).json({ error: "Invalid signature" });
   }
   const payload = req.body || {};
-  const status = String(payload.status || "").toLowerCase();
-  const sessionId = payload.sessionId || payload.session_id;
-  const orderId = payload.orderId || payload.order_id;
-  let topup = sessionId ? getTopupBySessionId(sessionId) : null;
-  if (!topup && orderId) topup = getTopupByOrderId(orderId);
-  if (!topup) return res.status(404).json({ error: "Order not found" });
-  if (sessionId && !topup.sessionId) updateTopup(topup.id, { sessionId, status: topup.status });
-  if (status === "paid") applyPaidTopup({ ...getTopupByOrderId(topup.orderId), sessionId: sessionId || topup.sessionId });
-  else if (status === "failed" || status === "expired" || status === "pending") {
-    if (topup.status !== "paid") updateTopup(topup.id, { sessionId: sessionId || topup.sessionId, status });
+  const eventId = String(payload.event_id || payload.id || payload.data?.purchase_id || uuid());
+  if (rememberWebhookEvent(eventId)) {
+    return res.json({ ok: true, duplicate: true });
   }
-  res.json({ ok: true });
-});
+  const result = applyBmcPayload(payload, eventId);
+  res.json({ ok: true, ...result });
+}
+
+app.post(`${PREFIX}/topup/callback`, handleBmcWebhook);
+app.post(`${PREFIX}/webhooks/bmc`, handleBmcWebhook);
 
 function usdFromCoins(coins) {
   const packs = [
@@ -318,13 +330,12 @@ app.get(`${PREFIX}/admin/stats`, auth("admin"), (_req, res) => {
   res.json(stats());
 });
 
-app.get(`${PREFIX}/admin/spayon`, auth("admin"), (_req, res) => {
-  res.json({ settings: publicSpayonSettings() });
+app.get(`${PREFIX}/admin/bmc`, auth("admin"), (_req, res) => {
+  res.json({ settings: publicBmcSettings() });
 });
 
-app.put(`${PREFIX}/admin/spayon`, auth("admin"), (req, res) => {
-  invalidateSpayonToken();
-  res.json({ settings: saveSpayonSettings(req.body || {}) });
+app.put(`${PREFIX}/admin/bmc`, auth("admin"), (req, res) => {
+  res.json({ settings: saveBmcSettings(req.body || {}) });
 });
 
 app.get(`${PREFIX}/admin/topups`, auth("admin"), (_req, res) => {

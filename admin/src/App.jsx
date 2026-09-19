@@ -258,7 +258,7 @@ export default function App() {
           </section>
         )}
 
-        {tab === "payments" && <SpayonPanel i18n={i18n} onError={setError} />}
+        {tab === "payments" && <BmcPanel i18n={i18n} onError={setError} />}
       </main>
 
       {editing && (
@@ -434,44 +434,37 @@ function ImageModal({ i18n, item, onClose, onSaved, onError }) {
   );
 }
 
-const METHOD_OPTIONS = [
-  { id: "visamaster", label: "Visa / Mastercard" },
-  { id: "mir", label: "MIR" },
-  { id: "crypto", label: "Crypto" },
-  { id: "sbp", label: "SBP" },
-];
-
-function SpayonPanel({ i18n, onError }) {
+function BmcPanel({ i18n, onError }) {
   const { t } = i18n;
   const [settings, setSettings] = useState(null);
   const [topups, setTopups] = useState([]);
   const [form, setForm] = useState({
-    env: "sandbox",
-    clientId: "",
-    clientSecret: "",
-    callbackSecret: "",
-    currency: "USD",
-    defaultMethod: "visamaster",
-    methods: ["visamaster"],
-    publicOrigin: "https://130.61.247.126.sslip.io",
+    username: "admin09wet",
+    pageUrl: "https://www.buymeacoffee.com/admin09wet",
+    accessToken: "",
+    webhookSecret: "",
+    extraId100: "",
+    extraId300: "",
+    extraId750: "",
+    publicOrigin: "https://silkrood.uz",
   });
   const [busy, setBusy] = useState(false);
   const [saved, setSaved] = useState(false);
 
   async function load() {
-    const [s, p] = await Promise.all([api("/admin/spayon"), api("/admin/topups")]);
+    const [s, p] = await Promise.all([api("/admin/bmc"), api("/admin/topups")]);
     setSettings(s.settings);
     setTopups(p.topups || []);
     setForm((cur) => ({
       ...cur,
-      env: s.settings.env || "sandbox",
-      clientId: s.settings.clientId || "",
-      clientSecret: "",
-      callbackSecret: "",
-      currency: s.settings.currency || "USD",
-      defaultMethod: s.settings.defaultMethod || "visamaster",
-      methods: s.settings.methods?.length ? s.settings.methods : ["visamaster"],
-      publicOrigin: s.settings.publicOrigin || "https://130.61.247.126.sslip.io",
+      username: s.settings.username || "admin09wet",
+      pageUrl: s.settings.pageUrl || "https://www.buymeacoffee.com/admin09wet",
+      accessToken: "",
+      webhookSecret: "",
+      extraId100: s.settings.extraId100 || "",
+      extraId300: s.settings.extraId300 || "",
+      extraId750: s.settings.extraId750 || "",
+      publicOrigin: s.settings.publicOrigin || "https://silkrood.uz",
     }));
   }
 
@@ -479,22 +472,14 @@ function SpayonPanel({ i18n, onError }) {
     load().catch((err) => onError(err.message));
   }, []);
 
-  function toggleMethod(id) {
-    setForm((cur) => {
-      const has = cur.methods.includes(id);
-      const methods = has ? cur.methods.filter((m) => m !== id) : [...cur.methods, id];
-      return { ...cur, methods: methods.length ? methods : [id] };
-    });
-  }
-
   async function save(e) {
     e.preventDefault();
     setBusy(true);
     setSaved(false);
     try {
-      const data = await api("/admin/spayon", { method: "PUT", body: JSON.stringify(form) });
+      const data = await api("/admin/bmc", { method: "PUT", body: JSON.stringify(form) });
       setSettings(data.settings);
-      setForm((cur) => ({ ...cur, clientSecret: "", callbackSecret: "" }));
+      setForm((cur) => ({ ...cur, accessToken: "", webhookSecret: "" }));
       setSaved(true);
     } catch (err) {
       onError(err.message);
@@ -506,79 +491,63 @@ function SpayonPanel({ i18n, onError }) {
   return (
     <section>
       <h1>{t("payments")}</h1>
-      <p className="hint">{t("spayonHint")}</p>
+      <p className="hint">{t("bmcHint")}</p>
       {settings && (
         <p className={`status-pill ${settings.configured ? "ok" : "warn"}`}>
-          {settings.configured ? t("spayonReady") : t("spayonMissing")}
+          {settings.configured ? t("bmcReady") : t("bmcMissing")}
         </p>
       )}
       <form className="settings-card" onSubmit={save}>
         <label>
-          {t("environment")}
-          <select value={form.env} onChange={(e) => setForm((c) => ({ ...c, env: e.target.value }))}>
-            <option value="sandbox">Sandbox</option>
-            <option value="production">Production</option>
-          </select>
+          {t("bmcUsername")}
+          <input value={form.username} onChange={(e) => setForm((c) => ({ ...c, username: e.target.value }))} autoComplete="off" />
         </label>
         <label>
-          {t("clientId")}
-          <input value={form.clientId} onChange={(e) => setForm((c) => ({ ...c, clientId: e.target.value }))} autoComplete="off" />
+          {t("bmcPageUrl")}
+          <input value={form.pageUrl} onChange={(e) => setForm((c) => ({ ...c, pageUrl: e.target.value }))} autoComplete="off" />
         </label>
         <label>
-          {t("clientSecret")}
+          {t("bmcToken")}
           <input
             type="password"
-            value={form.clientSecret}
-            placeholder={settings?.clientSecretSet ? settings.clientSecretMask : t("secretPlaceholder")}
-            onChange={(e) => setForm((c) => ({ ...c, clientSecret: e.target.value }))}
+            value={form.accessToken}
+            placeholder={settings?.accessTokenSet ? settings.accessTokenMask : t("secretPlaceholder")}
+            onChange={(e) => setForm((c) => ({ ...c, accessToken: e.target.value }))}
             autoComplete="new-password"
           />
         </label>
         <label>
-          {t("callbackSecret")}
+          {t("bmcWebhookSecret")}
           <input
             type="password"
-            value={form.callbackSecret}
-            placeholder={settings?.callbackSecretSet ? settings.callbackSecretMask : t("secretPlaceholder")}
-            onChange={(e) => setForm((c) => ({ ...c, callbackSecret: e.target.value }))}
+            value={form.webhookSecret}
+            placeholder={settings?.webhookSecretSet ? settings.webhookSecretMask : t("secretPlaceholder")}
+            onChange={(e) => setForm((c) => ({ ...c, webhookSecret: e.target.value }))}
             autoComplete="new-password"
           />
         </label>
         <label>
-          {t("currency")}
-          <select value={form.currency} onChange={(e) => setForm((c) => ({ ...c, currency: e.target.value }))}>
-            {["USD", "EUR", "GBP", "RUB", "AMD"].map((code) => (
-              <option key={code} value={code}>
-                {code}
-              </option>
-            ))}
-          </select>
+          {t("bmcExtra100")}
+          <input value={form.extraId100} onChange={(e) => setForm((c) => ({ ...c, extraId100: e.target.value }))} autoComplete="off" />
         </label>
         <label>
-          {t("defaultMethod")}
-          <select value={form.defaultMethod} onChange={(e) => setForm((c) => ({ ...c, defaultMethod: e.target.value }))}>
-            {METHOD_OPTIONS.map((m) => (
-              <option key={m.id} value={m.id}>
-                {m.label}
-              </option>
-            ))}
-          </select>
+          {t("bmcExtra300")}
+          <input value={form.extraId300} onChange={(e) => setForm((c) => ({ ...c, extraId300: e.target.value }))} autoComplete="off" />
         </label>
-        <div className="methods">
-          <span>{t("methods")}</span>
-          {METHOD_OPTIONS.map((m) => (
-            <label key={m.id} className="check">
-              <input type="checkbox" checked={form.methods.includes(m.id)} onChange={() => toggleMethod(m.id)} />
-              {m.label}
-            </label>
-          ))}
-        </div>
+        <label>
+          {t("bmcExtra750")}
+          <input value={form.extraId750} onChange={(e) => setForm((c) => ({ ...c, extraId750: e.target.value }))} autoComplete="off" />
+        </label>
         <label>
           {t("publicOrigin")}
           <input value={form.publicOrigin} onChange={(e) => setForm((c) => ({ ...c, publicOrigin: e.target.value }))} />
         </label>
         {settings && (
           <div className="readonly">
+            <p>
+              <small>{t("webhookUrl")}</small>
+              <code>{settings.webhookUrl}</code>
+            </p>
             <p>
               <small>{t("callbackUrl")}</small>
               <code>{settings.callbackUrl}</code>
