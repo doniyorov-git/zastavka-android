@@ -7,7 +7,7 @@ OpenAPI JSON: **[/zastavka-api/openapi.json](/zastavka-api/openapi.json)**
 
 Admin default password: `ZastavkaAdmin!` (override with `ADMIN_PASSWORD`).
 
-Coin top-up: Buy Me a Coffee. Webhook: `POST /webhooks/bmc` (also `POST /topup/callback`). Header `x-signature-sha256`.
+Coin top-up: Buy Me a Coffee extra `577212` ($1 = 100 coins). Checkout: `https://www.buymeacoffee.com/admin09wet/e/577212`. Webhook: `POST /webhooks/bmc` (also `POST /topup/callback`). Header `x-signature-sha256`. Credits **100 coins per $1** received.
 
 ## Public
 
@@ -30,6 +30,9 @@ Coin top-up: Buy Me a Coffee. Webhook: `POST /webhooks/bmc` (also `POST /topup/c
 | POST | `/purchases` | Buy `{ wallpaperId }` |
 | POST | `/topup` | Open BMC checkout `{ coins, usd }` |
 | GET | `/topup/status` | `{ orderId }` or `{ sessionId }` |
+| GET | `/billing/status` | Billing configuration and supported products |
+| POST | `/billing/verify` | Verify a Play purchase and credit the authenticated account once |
+| POST | `/billing/rtdn` | Authenticated Pub/Sub RTDN; reverse a fully voided purchase |
 
 ## Admin (Bearer token from `/admin/login`)
 
@@ -43,7 +46,10 @@ Coin top-up: Buy Me a Coffee. Webhook: `POST /webhooks/bmc` (also `POST /topup/c
 | POST | `/admin/wallpapers` | multipart: `file`, `title`, `price`, `tall` |
 | PATCH | `/admin/wallpapers/:id` | Edit title/price/file |
 | DELETE | `/admin/wallpapers/:id` | Delete wallpaper |
-| GET/PUT | `/admin/bmc` | Buy Me a Coffee tokens and extras |
+| GET | `/admin/bmc` | Buy Me a Coffee tokens and extras |
+| GET | `/admin/bmc/earnings` | Incoming payments, payouts, running totals |
+| GET | `/admin/bmc/banks` | Uzbekistan banks and branches |
+| POST | `/admin/bmc/payouts` | Yechib olish: `{ amount, bankId, branchId }` (status pending / Jarayonda) |
 | GET | `/admin/topups` | Coin top-up orders |
 
 Auth header: `Authorization: Bearer <token>`

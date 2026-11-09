@@ -659,11 +659,17 @@ html.native .screen--scroll {
   margin-inline: auto;
   background: #fff;
   border-radius: 28px 28px 0 0;
-  padding: 12px 20px 28px;
+  padding: 12px 20px calc(20px + env(safe-area-inset-bottom, 0px));
   box-shadow: 0 -12px 40px rgba(28, 31, 46, 0.16);
   animation: up 0.28s ease;
   max-height: 88%;
   overflow: auto;
+}
+
+.sheet .btn-primary {
+  position: sticky;
+  bottom: 0;
+  margin-top: 8px;
 }
 
 .sheet::-webkit-scrollbar {

@@ -21,3 +21,7 @@ zastavka-source.zip
 play/.raw-phone
 play/screenshots-7
 play/screenshots-10
+
+ios/build
+.DS_Store
+*/.DS_Store

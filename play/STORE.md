@@ -52,6 +52,7 @@ Features:
 • Fresh wallpaper catalog
 • Coin balance and premium unlocks
 • Saved favorites
+• Set as Home and Lock wallpaper on Android (WallpaperManager, not gallery-only)
 • Buy Me a Coffee payments
 • Light, full-screen design
 
@@ -61,19 +62,20 @@ Account deletion: https://silkrood.uz/zastavka/delete-account.html
 
 ## Graphics
 
-JPEG or 24-bit PNG, no alpha.
+JPEG or 24-bit PNG, no alpha. **Upload 9:16 portrait phone screenshots. Do not upload `play/screenshots-16x9/` (landscape / desktop — rejected for this listing).**
 
 - App icon: `play/icon-512.png` (512×512, 24-bit PNG)
-- Feature graphic / banner: `play/feature-graphic.png` (1024×500, no alpha)
-- Phone 16:9 landscape (1920×1080, at least 3, full-bleed mobile UI, no device frame): `play/screenshots-16x9/`
-- Optional portrait phone (1080×1920): `play/screenshots/`
+- Feature graphic / banner: `play/feature-graphic.png` (1024×500, RGB, no alpha)
+- Phone screenshots (1080×1920, 9:16, full-bleed mobile UI, no device frame): `play/screenshots/`
 
-16:9 upload order (minimum 3):
+Play Console → Phone screenshots. Minimum 2, use at least 3. Upload order:
 
 1. `05-home.png` — catalog
 2. `07-profile.png` — profile
 3. `08-topup.png` — Buy Me a Coffee top-up
 4. `01-onboarding.png` — onboarding (extra)
+5. `06-saved.png` — saved (extra)
+6. `02-onboarding-coins.png`, `03-login.png`, `04-register.png` (optional extras)
 
 ## Data safety (Play Console)
 

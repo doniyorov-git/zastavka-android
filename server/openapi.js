@@ -203,6 +203,52 @@ export const openApi = {
         responses: { 200: { description: "Users" } },
       },
     },
+    "/admin/bmc": {
+      get: {
+        tags: ["Admin"],
+        security: [{ bearerAuth: [] }],
+        summary: "BMC settings (masked secrets)",
+        responses: { 200: { description: "Settings" } },
+      },
+      put: {
+        tags: ["Admin"],
+        security: [{ bearerAuth: [] }],
+        summary: "Save BMC settings",
+        responses: { 200: { description: "Settings" } },
+      },
+    },
+    "/admin/bmc/earnings": {
+      get: {
+        tags: ["Admin"],
+        security: [{ bearerAuth: [] }],
+        summary: "BMC incoming payments, payouts, running totals",
+        responses: { 200: { description: "Earnings ledger" } },
+      },
+    },
+    "/admin/bmc/sync": {
+      post: {
+        tags: ["Admin"],
+        security: [{ bearerAuth: [] }],
+        summary: "Sync supporters, extras, and memberships from BMC API into SQLite",
+        responses: { 200: { description: "Imported" } },
+      },
+    },
+    "/admin/bmc/banks": {
+      get: {
+        tags: ["Admin"],
+        security: [{ bearerAuth: [] }],
+        summary: "Uzbekistan banks and branches for Yechib olish",
+        responses: { 200: { description: "Banks" } },
+      },
+    },
+    "/admin/bmc/payouts": {
+      post: {
+        tags: ["Admin"],
+        security: [{ bearerAuth: [] }],
+        summary: "Record a Yechib olish payout request with bank, filial, and amount",
+        responses: { 201: { description: "Created" } },
+      },
+    },
     "/admin/purchases": {
       get: {
         tags: ["Admin"],
@@ -210,6 +256,14 @@ export const openApi = {
         summary: "List purchases",
         parameters: [{ name: "q", in: "query", schema: { type: "string" } }],
         responses: { 200: { description: "Purchases" } },
+      },
+    },
+    "/admin/topups": {
+      get: {
+        tags: ["Admin"],
+        security: [{ bearerAuth: [] }],
+        summary: "List coin top-ups",
+        responses: { 200: { description: "Top-ups" } },
       },
     },
     "/admin/wallpapers": {

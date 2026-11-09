@@ -7,9 +7,9 @@ export const USER = {
 export const COIN_USD_RATE = 0.01;
 
 export const PACKAGES = [
-  { id: "p1", coins: 100, usd: 0.99, popular: false },
-  { id: "p2", coins: 300, usd: 2.99, popular: true },
-  { id: "p3", coins: 750, usd: 5.99, popular: false },
+  { id: "p1", coins: 100, usd: 1, popular: false },
+  { id: "p2", coins: 300, usd: 3, popular: true },
+  { id: "p3", coins: 500, usd: 5, popular: false },
 ];
 
 export function formatUsd(amount) {

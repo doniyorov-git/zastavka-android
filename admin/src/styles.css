@@ -43,7 +43,8 @@ button { cursor: pointer; border: none; background: none; }
 .ghost { color: var(--danger); font-weight: 500; text-align: left; }
 .main { padding: 28px 32px; }
 .main h1 { font-size: 24px; margin-bottom: 18px; }
-.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 16px; margin-bottom: 18px; }
+.stats.four { grid-template-columns: repeat(4, minmax(0, 1fr)); }
 .stats article {
   background: #fff;
   border-radius: 20px;
@@ -174,6 +175,51 @@ input, select {
 }
 .status-pill.ok { background: #e9fbf2; color: #1a9a5c; }
 .status-pill.warn { background: #fff4e5; color: #c67a12; }
+.status-pill.bad { background: #ffecef; color: var(--danger); }
+.toolbar-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  align-items: center;
+  margin: 0 0 22px;
+}
+.link-btn {
+  display: inline-flex;
+  align-items: center;
+  height: 44px;
+  padding: 0 16px;
+  border-radius: 14px;
+  background: #fff;
+  border: 1.5px solid var(--line);
+  color: var(--text);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 14px;
+}
+.link-btn:hover { border-color: var(--primary); color: var(--primary); }
+.payout-card {
+  background: #fff;
+  border-radius: 20px;
+  padding: 22px;
+  margin-bottom: 28px;
+  box-shadow: 0 8px 24px rgba(28, 31, 46, 0.06);
+}
+.payout-card .hint { margin: 0 0 14px; }
+.payout-card label { display: flex; flex-direction: column; gap: 8px; font-size: 13px; font-weight: 500; color: var(--muted); }
+.payout-card input[type="text"] {
+  width: 100%;
+}
+.payout-card .checkout-save { margin-top: 12px; height: 44px; }
+.payout-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  align-items: end;
+}
+.payout-grid .payout-submit { height: 44px; justify-self: start; }
+.filter-select input[type="search"] { height: 36px; }
+.payout-grid small { color: var(--muted); font-size: 12px; }
+.table-wrap .status-pill { margin-bottom: 0; }
 .settings-card {
   background: #fff;
   border-radius: 20px;
@@ -200,4 +246,6 @@ input, select {
   .side nav { flex-direction: row; flex-wrap: wrap; }
   .side-foot { margin: 0; flex-direction: row; }
   .stats { grid-template-columns: 1fr; }
+  .stats.four { grid-template-columns: 1fr 1fr; }
+  .payout-grid { grid-template-columns: 1fr; }
 }

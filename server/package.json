@@ -5,13 +5,18 @@
   "type": "module",
   "scripts": {
     "start": "node index.js",
-    "dev": "node --watch index.js"
+    "dev": "node --watch index.js",
+    "check": "node --check index.js && node --check google-billing.js && node --check db.js"
+  },
+  "engines": {
+    "node": ">=20.19"
   },
   "dependencies": {
     "bcryptjs": "^3.0.3",
     "better-sqlite3": "^12.11.1",
     "cors": "^2.8.5",
     "express": "^5.1.0",
+    "google-auth-library": "10.5.0",
     "multer": "^2.0.2",
     "swagger-ui-express": "^5.0.1",
     "uuid": "^11.1.0"

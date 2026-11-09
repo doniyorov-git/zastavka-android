@@ -53,8 +53,6 @@ export default function App() {
     });
   }, [token]);
 
-  if (!token) return <Login i18n={i18n} onOk={(tk) => { setToken(tk); setTok(tk); }} />;
-
   const filteredWallpapers = useMemo(() => {
     const s = q.trim().toLowerCase();
     if (!s) return wallpapers;
@@ -74,14 +72,16 @@ export default function App() {
 
   const { t, lang, setLang } = i18n;
 
+  if (!token) return <Login i18n={i18n} onOk={(tk) => { setToken(tk); setTok(tk); }} />;
+
   return (
     <div className="shell">
       <aside className="side">
         <div className="brand">Zastavka</div>
         <nav>
-          {["dashboard", "images", "purchases", "users", "payments"].map((id) => (
+          {["dashboard", "images", "purchases", "users", "earnings"].map((id) => (
             <button key={id} className={tab === id ? "active" : ""} onClick={() => setTab(id)}>
-              {t(id)}
+              {t(id === "earnings" ? "withdraw" : id)}
             </button>
           ))}
           <a href="/zastavka-api/docs" target="_blank" rel="noreferrer">
@@ -124,6 +124,18 @@ export default function App() {
               <article>
                 <small>{t("purchasesCount")}</small>
                 <strong>{stats.purchases}</strong>
+              </article>
+              <article>
+                <small>{t("bmcGross")}</small>
+                <strong>{formatMoney(stats.bmcGross, stats.bmcCurrency)}</strong>
+              </article>
+              <article>
+                <small>{t("bmcAvailable")}</small>
+                <strong>{formatMoney(stats.bmcAvailable, stats.bmcCurrency)}</strong>
+              </article>
+              <article>
+                <small>{t("bmcWithdrawn")}</small>
+                <strong>{formatMoney(stats.bmcWithdrawn, stats.bmcCurrency)}</strong>
               </article>
             </div>
           </section>
@@ -258,7 +270,7 @@ export default function App() {
           </section>
         )}
 
-        {tab === "payments" && <BmcPanel i18n={i18n} onError={setError} />}
+        {tab === "earnings" && <BmcPanel i18n={i18n} onError={setError} />}
       </main>
 
       {editing && (
@@ -434,53 +446,116 @@ function ImageModal({ i18n, item, onClose, onSaved, onError }) {
   );
 }
 
+function formatMoney(amount, currency = "USD") {
+  const n = Number(amount) || 0;
+  try {
+    return new Intl.NumberFormat(undefined, { style: "currency", currency: currency || "USD" }).format(n);
+  } catch {
+    return `${n.toFixed(2)} ${currency || "USD"}`;
+  }
+}
+
+function statusClass(status) {
+  if (status === "paid") return "ok";
+  if (status === "cancelled" || status === "refunded") return "bad";
+  return "warn";
+}
+
+function FilterSelect({ label, value, onChange, options, placeholder, searchPlaceholder, disabled, required }) {
+  const [query, setQuery] = useState("");
+  const filtered = useMemo(() => {
+    const s = query.trim().toLowerCase();
+    const list = s
+      ? options.filter(
+          (item) =>
+            item.label.toLowerCase().includes(s) || String(item.value).toLowerCase().includes(s)
+        )
+      : options;
+    if (value && !list.some((item) => item.value === value)) {
+      const selected = options.find((item) => item.value === value);
+      if (selected) return [selected, ...list];
+    }
+    return list;
+  }, [options, query, value]);
+
+  return (
+    <label className="filter-select">
+      {label}
+      <input
+        type="search"
+        value={query}
+        disabled={disabled}
+        placeholder={searchPlaceholder}
+        onChange={(e) => setQuery(e.target.value)}
+      />
+      <select value={value} required={required} disabled={disabled} onChange={(e) => onChange(e.target.value)}>
+        <option value="">{placeholder}</option>
+        {filtered.map((item) => (
+          <option key={item.value} value={item.value}>
+            {item.label}
+          </option>
+        ))}
+      </select>
+    </label>
+  );
+}
+
+function payoutStatusLabel(status, t) {
+  if (status === "pending" || status === "jarayonda") return t("pending");
+  if (status === "paid") return t("paid");
+  if (status === "cancelled") return t("cancelled");
+  return t(status) || status;
+}
+
 function BmcPanel({ i18n, onError }) {
   const { t } = i18n;
-  const [settings, setSettings] = useState(null);
-  const [topups, setTopups] = useState([]);
-  const [form, setForm] = useState({
-    username: "admin09wet",
-    pageUrl: "https://www.buymeacoffee.com/admin09wet",
-    accessToken: "",
-    webhookSecret: "",
-    extraId100: "",
-    extraId300: "",
-    extraId750: "",
-    publicOrigin: "https://silkrood.uz",
+  const [payouts, setPayouts] = useState([]);
+  const [banks, setBanks] = useState([]);
+  const [summary, setSummary] = useState({
+    gross: 0,
+    available: 0,
+    withdrawn: 0,
+    pending: 0,
+    incomingCount: 0,
+    currency: "USD",
+    byCurrency: [],
   });
+  const [payoutForm, setPayoutForm] = useState({ amount: "", bankId: "", branchId: "", currency: "USD" });
+  const [checkoutUrl, setCheckoutUrl] = useState("");
+  const [webhookSecret, setWebhookSecret] = useState("");
+  const [webhookUrl, setWebhookUrl] = useState("");
+  const [webhookSecretSet, setWebhookSecretSet] = useState(false);
   const [busy, setBusy] = useState(false);
-  const [saved, setSaved] = useState(false);
+  const [notice, setNotice] = useState("");
 
   async function load() {
-    const [s, p] = await Promise.all([api("/admin/bmc"), api("/admin/topups")]);
-    setSettings(s.settings);
-    setTopups(p.topups || []);
-    setForm((cur) => ({
-      ...cur,
-      username: s.settings.username || "admin09wet",
-      pageUrl: s.settings.pageUrl || "https://www.buymeacoffee.com/admin09wet",
-      accessToken: "",
-      webhookSecret: "",
-      extraId100: s.settings.extraId100 || "",
-      extraId300: s.settings.extraId300 || "",
-      extraId750: s.settings.extraId750 || "",
-      publicOrigin: s.settings.publicOrigin || "https://silkrood.uz",
-    }));
+    const e = await api("/admin/bmc/earnings");
+    setPayouts(e.payouts || []);
+    setBanks(e.banks || []);
+    setSummary(e.summary || summary);
+    setPayoutForm((cur) => ({ ...cur, currency: e.summary?.currency || "USD" }));
+    setCheckoutUrl(e.settings?.checkoutUrl || "");
+    setWebhookUrl(e.settings?.webhookUrl || "");
+    setWebhookSecretSet(Boolean(e.settings?.webhookSecretSet));
+    setWebhookSecret("");
   }
 
-  useEffect(() => {
-    load().catch((err) => onError(err.message));
-  }, []);
-
-  async function save(e) {
-    e.preventDefault();
+  async function saveCheckout(ev) {
+    ev.preventDefault();
     setBusy(true);
-    setSaved(false);
+    setNotice("");
     try {
-      const data = await api("/admin/bmc", { method: "PUT", body: JSON.stringify(form) });
-      setSettings(data.settings);
-      setForm((cur) => ({ ...cur, accessToken: "", webhookSecret: "" }));
-      setSaved(true);
+      const body = { checkoutUrl };
+      if (webhookSecret.trim()) body.webhookSecret = webhookSecret.trim();
+      const data = await api("/admin/bmc", {
+        method: "PUT",
+        body: JSON.stringify(body),
+      });
+      setCheckoutUrl(data.settings?.checkoutUrl || checkoutUrl);
+      setWebhookUrl(data.settings?.webhookUrl || webhookUrl);
+      setWebhookSecretSet(Boolean(data.settings?.webhookSecretSet));
+      setWebhookSecret("");
+      setNotice(t("savedOk"));
     } catch (err) {
       onError(err.message);
     } finally {
@@ -488,114 +563,201 @@ function BmcPanel({ i18n, onError }) {
     }
   }
 
+  useEffect(() => {
+    load().catch((err) => onError(err.message));
+  }, []);
+
+  async function submitPayout(e) {
+    e.preventDefault();
+    setBusy(true);
+    setNotice("");
+    const value = Number(payoutForm.amount);
+    if (!Number.isFinite(value) || value <= 0) {
+      setBusy(false);
+      onError(t("withdrawAmount"));
+      return;
+    }
+    if (value > available + 0.009) {
+      setBusy(false);
+      onError(`${t("remaining")}: ${formatMoney(available, summary.currency)}`);
+      return;
+    }
+    try {
+      const data = await api("/admin/bmc/payouts", {
+        method: "POST",
+        body: JSON.stringify({
+          amount: Number(payoutForm.amount),
+          currency: payoutForm.currency || summary.currency,
+          bankId: payoutForm.bankId,
+          branchId: payoutForm.branchId,
+        }),
+      });
+      setPayouts(data.payouts || []);
+      setSummary(data.summary || summary);
+      setPayoutForm((cur) => ({ ...cur, amount: "", bankId: "", branchId: "" }));
+      setNotice(t("payoutCreated"));
+    } catch (err) {
+      onError(err.message);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function patchPayout(id, status) {
+    try {
+      const data = await api(`/admin/bmc/payouts/${id}`, { method: "PATCH", body: JSON.stringify({ status }) });
+      setPayouts(data.payouts || []);
+      setSummary(data.summary || summary);
+    } catch (err) {
+      onError(err.message);
+    }
+  }
+
+  const available = Number(summary.available) || 0;
+  const selectedBank = banks.find((item) => item.id === payoutForm.bankId);
+  const branchOptions = (selectedBank?.branches || []).map((item) => ({ value: item.id, label: item.name }));
+  const bankOptions = banks.map((item) => ({ value: item.id, label: item.name }));
+
   return (
     <section>
-      <h1>{t("payments")}</h1>
-      <p className="hint">{t("bmcHint")}</p>
-      {settings && (
-        <p className={`status-pill ${settings.configured ? "ok" : "warn"}`}>
-          {settings.configured ? t("bmcReady") : t("bmcMissing")}
-        </p>
-      )}
-      <form className="settings-card" onSubmit={save}>
+      <h1>{t("withdraw")}</h1>
+      <div className="stats four">
+        <article>
+          <small>{t("bmcGross")}</small>
+          <strong>{formatMoney(summary.gross, summary.currency)}</strong>
+        </article>
+        <article>
+          <small>{t("bmcAvailable")}</small>
+          <strong>{formatMoney(summary.available, summary.currency)}</strong>
+        </article>
+        <article>
+          <small>{t("bmcWithdrawn")}</small>
+          <strong>{formatMoney(summary.withdrawn, summary.currency)}</strong>
+        </article>
+        <article>
+          <small>{t("bmcPendingOut")}</small>
+          <strong>{formatMoney(summary.pending, summary.currency)}</strong>
+        </article>
+      </div>
+      {notice && <p className="ok-text">{notice}</p>}
+
+      <form className="payout-card" onSubmit={saveCheckout}>
         <label>
-          {t("bmcUsername")}
-          <input value={form.username} onChange={(e) => setForm((c) => ({ ...c, username: e.target.value }))} autoComplete="off" />
-        </label>
-        <label>
-          {t("bmcPageUrl")}
-          <input value={form.pageUrl} onChange={(e) => setForm((c) => ({ ...c, pageUrl: e.target.value }))} autoComplete="off" />
-        </label>
-        <label>
-          {t("bmcToken")}
+          {t("checkoutUrl")}
           <input
-            type="password"
-            value={form.accessToken}
-            placeholder={settings?.accessTokenSet ? settings.accessTokenMask : t("secretPlaceholder")}
-            onChange={(e) => setForm((c) => ({ ...c, accessToken: e.target.value }))}
-            autoComplete="new-password"
+            type="text"
+            value={checkoutUrl}
+            onChange={(e) => setCheckoutUrl(e.target.value)}
+            placeholder="https://www.buymeacoffee.com/admin09wet/e/577212"
+            required
           />
         </label>
         <label>
           {t("bmcWebhookSecret")}
           <input
             type="password"
-            value={form.webhookSecret}
-            placeholder={settings?.webhookSecretSet ? settings.webhookSecretMask : t("secretPlaceholder")}
-            onChange={(e) => setForm((c) => ({ ...c, webhookSecret: e.target.value }))}
-            autoComplete="new-password"
+            value={webhookSecret}
+            onChange={(e) => setWebhookSecret(e.target.value)}
+            placeholder={webhookSecretSet ? t("secretPlaceholder") : "BMC Integrations → Signing Secret"}
+            autoComplete="off"
           />
+          <small>{webhookSecretSet ? t("bmcReady") : t("bmcMissing")}</small>
         </label>
-        <label>
-          {t("bmcExtra100")}
-          <input value={form.extraId100} onChange={(e) => setForm((c) => ({ ...c, extraId100: e.target.value }))} autoComplete="off" />
-        </label>
-        <label>
-          {t("bmcExtra300")}
-          <input value={form.extraId300} onChange={(e) => setForm((c) => ({ ...c, extraId300: e.target.value }))} autoComplete="off" />
-        </label>
-        <label>
-          {t("bmcExtra750")}
-          <input value={form.extraId750} onChange={(e) => setForm((c) => ({ ...c, extraId750: e.target.value }))} autoComplete="off" />
-        </label>
-        <label>
-          {t("publicOrigin")}
-          <input value={form.publicOrigin} onChange={(e) => setForm((c) => ({ ...c, publicOrigin: e.target.value }))} />
-        </label>
-        {settings && (
-          <div className="readonly">
-            <p>
-              <small>{t("webhookUrl")}</small>
-              <code>{settings.webhookUrl}</code>
-            </p>
-            <p>
-              <small>{t("callbackUrl")}</small>
-              <code>{settings.callbackUrl}</code>
-            </p>
-            <p>
-              <small>{t("returnUrl")}</small>
-              <code>{settings.returnUrl}</code>
-            </p>
-          </div>
-        )}
-        <div className="row">
-          {saved && <span className="ok-text">{t("savedOk")}</span>}
-          <button className="primary" disabled={busy}>
-            {t("save")}
+        {webhookUrl ? (
+          <label>
+            {t("webhookUrl")}
+            <input type="text" value={webhookUrl} readOnly onFocus={(e) => e.target.select()} />
+          </label>
+        ) : null}
+        <button className="primary checkout-save" disabled={busy}>
+          {t("save")}
+        </button>
+      </form>
+
+      <form className="payout-card" onSubmit={submitPayout}>
+        <h2 className="subhead">{t("withdraw")}</h2>
+        <div className="payout-grid">
+          <label>
+            {t("withdrawAmount")}
+            <input
+              type="number"
+              min="0.01"
+              step="0.01"
+              max={available > 0 ? available : undefined}
+              value={payoutForm.amount}
+              onChange={(e) => setPayoutForm((c) => ({ ...c, amount: e.target.value }))}
+              required
+            />
+            <small>
+              {t("remaining")}: {formatMoney(available, summary.currency)}
+            </small>
+          </label>
+          <FilterSelect
+            label={t("bank")}
+            value={payoutForm.bankId}
+            options={bankOptions}
+            placeholder={t("selectBank")}
+            searchPlaceholder={t("searchBank")}
+            required
+            onChange={(bankId) => setPayoutForm((c) => ({ ...c, bankId, branchId: "" }))}
+          />
+          <FilterSelect
+            key={payoutForm.bankId || "no-bank"}
+            label={t("branch")}
+            value={payoutForm.branchId}
+            options={branchOptions}
+            placeholder={t("selectBranch")}
+            searchPlaceholder={t("searchBranch")}
+            required
+            disabled={!payoutForm.bankId}
+            onChange={(branchId) => setPayoutForm((c) => ({ ...c, branchId }))}
+          />
+          <button className="primary payout-submit" disabled={busy || available <= 0}>
+            {t("withdraw")}
           </button>
         </div>
       </form>
 
-      <h2 className="subhead">{t("topups")}</h2>
+      <h2 className="subhead">{t("payoutHistory")}</h2>
       <div className="table-wrap">
         <table>
           <thead>
             <tr>
-              <th>{t("order")}</th>
-              <th>{t("coins")}</th>
               <th>{t("amount")}</th>
+              <th>{t("bank")}</th>
+              <th>{t("branch")}</th>
               <th>{t("status")}</th>
               <th>{t("created")}</th>
+              <th />
             </tr>
           </thead>
           <tbody>
-            {topups.length === 0 && (
+            {payouts.length === 0 && (
               <tr>
-                <td colSpan={5}>{t("noRows")}</td>
+                <td colSpan={6}>{t("noRows")}</td>
               </tr>
             )}
-            {topups.map((item) => (
+            {payouts.map((item) => (
               <tr key={item.id}>
+                <td>{formatMoney(item.amount, item.currency)}</td>
+                <td>{item.bank || "—"}</td>
+                <td>{item.branch || "—"}</td>
                 <td>
-                  <div>{item.orderId}</div>
-                  <small>{item.sessionId || "—"}</small>
+                  <span className={`status-pill ${statusClass(item.status)}`}>{payoutStatusLabel(item.status, t)}</span>
                 </td>
-                <td>{item.coins}</td>
-                <td>
-                  {item.amount} {item.currency}
-                </td>
-                <td>{item.status}</td>
                 <td>{new Date(item.createdAt).toLocaleString()}</td>
+                <td className="actions">
+                  {item.status === "pending" && (
+                    <>
+                      <button type="button" onClick={() => patchPayout(item.id, "paid")}>
+                        {t("markPaid")}
+                      </button>
+                      <button type="button" className="danger" onClick={() => patchPayout(item.id, "cancelled")}>
+                        {t("markCancelled")}
+                      </button>
+                    </>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>

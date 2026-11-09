@@ -16,37 +16,18 @@ const ANDROID_UA =
 const IPHONE_UA =
   "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.0 Mobile/15E148 Safari/604.1";
 
-const shots = [
-  "01-onboarding.png",
-  "02-onboarding-coins.png",
-  "03-login.png",
-  "04-register.png",
-  "05-home.png",
-  "06-saved.png",
-  "07-profile.png",
-  "08-topup.png",
-];
+const PHONE_CSS = `
+html, body, #root, .app, .shell, .screen {
+  max-width: none !important;
+  width: 100% !important;
+}
+.grid { grid-template-columns: 1fr 1fr !important; }
+.card-wall img { aspect-ratio: 9 / 16 !important; }
+`;
 
-// Phone CSS viewports (under the 1100px desktop breakpoint) × DSF = store pixels.
+// CSS viewport stays under the 1100px desktop breakpoint.
+// deviceScaleFactor yields store pixel sizes (1080×1920 / 1290×2796 / 1284×2778).
 const targets = [
-  {
-    name: "play-16x9",
-    dir: path.join(__dirname, "screenshots-16x9"),
-    width: 1920,
-    height: 1080,
-    viewport: { width: 640, height: 360 },
-    deviceScaleFactor: 3,
-    userAgent: ANDROID_UA,
-  },
-  {
-    name: "ios-16x9",
-    dir: path.resolve(__dirname, "../store/ios/screenshots/16x9"),
-    width: 1920,
-    height: 1080,
-    viewport: { width: 640, height: 360 },
-    deviceScaleFactor: 3,
-    userAgent: IPHONE_UA,
-  },
   {
     name: "play-1080x1920",
     dir: path.join(__dirname, "screenshots"),
@@ -106,10 +87,26 @@ async function captureTarget(browser, target) {
     ignoreHTTPSErrors: true,
   });
   const page = await context.newPage();
+  await page.addInitScript((css) => {
+    try {
+      localStorage.clear();
+      sessionStorage.clear();
+    } catch {}
+    const inject = () => {
+      if (document.getElementById("store-phone-css")) return;
+      const s = document.createElement("style");
+      s.id = "store-phone-css";
+      s.textContent = css;
+      (document.head || document.documentElement).appendChild(s);
+    };
+    document.addEventListener("DOMContentLoaded", inject);
+    inject();
+  }, PHONE_CSS);
 
   async function waitVisual() {
+    await page.addStyleTag({ content: PHONE_CSS }).catch(() => {});
     await page.waitForFunction(() => document.fonts?.ready).catch(() => {});
-    await page.waitForTimeout(500);
+    await page.waitForTimeout(400);
     await page.evaluate(async () => {
       const images = [...document.images];
       await Promise.all(
@@ -130,9 +127,23 @@ async function captureTarget(browser, target) {
       for (const card of document.querySelectorAll(".card-wall")) {
         const alt = (card.querySelector("img")?.alt || "").trim();
         const price = (card.querySelector(".badge span")?.textContent || "").replace(/\s/g, "");
-        if (/^test$/i.test(alt) || Number(price) >= 10000) card.remove();
+        const n = Number(price);
+        if (/test/i.test(alt) || n >= 10000 || n === 500000) card.remove();
       }
     });
+  }
+
+  async function saveSampleWallpapers() {
+    const fabs = page.locator(".card-wall .save-fab");
+    const n = Math.min(4, await fabs.count());
+    for (let i = 0; i < n; i++) {
+      const fab = fabs.nth(i);
+      const label = (await fab.getAttribute("aria-label")) || "";
+      if (/unsave|remove/i.test(label)) continue;
+      await fab.click();
+      await page.waitForTimeout(250);
+    }
+    await page.waitForTimeout(600);
   }
 
   async function shot(name) {
@@ -141,6 +152,7 @@ async function captureTarget(browser, target) {
     await page.screenshot({
       path: dest,
       type: "png",
+      fullPage: false,
       animations: "disabled",
       omitBackground: false,
     });
@@ -149,6 +161,7 @@ async function captureTarget(browser, target) {
   }
 
   await page.goto(base, { waitUntil: "networkidle", timeout: 60000 });
+  await page.addStyleTag({ content: PHONE_CSS }).catch(() => {});
   await shot("01-onboarding.png");
   await page.getByRole("button", { name: "Next" }).click();
   await shot("02-onboarding-coins.png");
@@ -165,6 +178,8 @@ async function captureTarget(browser, target) {
   await page.locator(".nav").waitFor({ timeout: 20000 });
   await page.locator(".card-wall").first().waitFor({ timeout: 20000 });
   await hideJunkCards();
+  await saveSampleWallpapers();
+  await hideJunkCards();
   await shot("05-home.png");
   await page.getByRole("button", { name: "Saved" }).click();
   await hideJunkCards();
@@ -172,9 +187,26 @@ async function captureTarget(browser, target) {
   await page.getByRole("button", { name: "Profile" }).click();
   await shot("07-profile.png");
   await page.getByRole("button", { name: "Top up" }).click();
-  await page.locator(".sheet, .modal, .topup").first().waitFor({ timeout: 10000 }).catch(() => {});
+  await page.locator(".sheet").first().waitFor({ timeout: 10000 });
   await shot("08-topup.png");
   await context.close();
+}
+
+function flattenBanner(src, dest) {
+  fs.mkdirSync(path.dirname(dest), { recursive: true });
+  const script = `
+from PIL import Image
+im = Image.open(${JSON.stringify(src)}).convert("RGB")
+if im.size != (1024, 500):
+    im = im.resize((1024, 500), Image.Resampling.LANCZOS)
+im.save(${JSON.stringify(dest)}, "PNG")
+print(im.size[0], im.size[1], im.mode)
+`;
+  const r = spawnSync(python, ["-c", script], { encoding: "utf8" });
+  if (r.status !== 0) {
+    throw new Error(r.stderr || r.stdout || "banner flatten failed");
+  }
+  return r.stdout.trim();
 }
 
 const browser = await chromium.launch({
@@ -190,5 +222,12 @@ try {
 } finally {
   await browser.close();
 }
+
+const feature = path.join(__dirname, "feature-graphic.png");
+console.log("play-banner", flattenBanner(feature, feature));
+console.log(
+  "ios-banner",
+  flattenBanner(feature, path.resolve(__dirname, "../store/ios/banner-1024x500.png"))
+);
 
 console.log("done");

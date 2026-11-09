@@ -3,7 +3,7 @@ import { USER, PACKAGES, formatUsd, usdForCoins } from "./data";
 import { LANGS, langLabel, useI18n } from "./i18n";
 import { api, getToken, setToken, wallpaperSrc } from "./api";
 import { Icon, Logo } from "./icons";
-import { exitApp, initNativeShell, legalUrl, listenAppResume, listenBackButton, openPaymentCheckout, saveWallpaper } from "./native";
+import { closeCheckoutPlaceholder, exitApp, initNativeShell, isNativeApp, legalUrl, listenAppResume, listenBackButton, openCheckoutPlaceholder, openPaymentCheckout, saveWallpaper } from "./native";
 import {
   IllustrationGallery,
   IllustrationCoins,
@@ -199,12 +199,18 @@ export default function App() {
       );
     }, 160);
     try {
-      await saveWallpaper(item);
+      const result = await saveWallpaper(item, { dialogTitle: t("setWallpaper") });
       clearInterval(tick);
+      if (result === "share-cancel") {
+        setDownload(null);
+        return;
+      }
       setDownload({ id: item.id, progress: 100 });
+      const toastKey =
+        result === "set" ? "toastWallpaperSet" : result === "share" ? "toastWallpaperShare" : "toastDownloaded";
       setTimeout(() => {
         setDownload(null);
-        notify(t("toastDownloaded"));
+        notify(t(toastKey));
       }, 350);
     } catch (err) {
       clearInterval(tick);
@@ -257,20 +263,23 @@ export default function App() {
       notify(t("toastCoins"));
       return;
     }
+    const checkoutWindow = openCheckoutPlaceholder();
     setPaying(true);
     try {
       const data = await api("/topup", {
         method: "POST",
         body: JSON.stringify({ coins: qty, usd: usdForCoins(qty), lang }),
       });
+      if (!data?.sessionUrl) throw new Error(t("toastPayFail"));
       sessionStorage.setItem(
         "zastavka-topup",
         JSON.stringify({ orderId: data.orderId, sessionId: data.sessionId, coins: qty })
       );
       setShowTopUp(false);
       notify(t("toastPayRedirect"));
-      await openPaymentCheckout(data.sessionUrl);
+      await openPaymentCheckout(data.sessionUrl, checkoutWindow);
     } catch (err) {
+      closeCheckoutPlaceholder(checkoutWindow);
       notify(err.message);
     } finally {
       setPaying(false);
@@ -808,7 +817,7 @@ function WallpaperGrid({ items, purchased, saved, download, onTap, onSave }) {
             </button>
             <div className={`badge ${owned ? "owned" : ""}`}>
               {owned ? <Icon name="download" size={14} /> : <CoinMark size={14} />}
-              <span>{owned ? t("download") : item.price}</span>
+              <span>{owned ? t(isNativeApp() ? "setWallpaper" : "download") : item.price}</span>
             </div>
             {busy && (
               <div className="progress-overlay">
@@ -890,7 +899,9 @@ function TopUpSheet({
           <input value={amount} readOnly placeholder="$0.00" />
         </div>
         <p className="legal">{t("paySecure")}</p>
-        <PrimaryButton onClick={onPay}>{paying ? t("paying") : t("pay")}</PrimaryButton>
+        <PrimaryButton onClick={onPay} disabled={paying}>
+          {paying ? t("paying") : t("pay")}
+        </PrimaryButton>
       </div>
     </div>
   );

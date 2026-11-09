@@ -1,17 +1,31 @@
-import { readFileSync, writeFileSync, mkdirSync } from "node:fs";
+import { copyFileSync, mkdirSync, unlinkSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { fileURLToPath } from "node:url";
-import { Resvg } from "@resvg/resvg-js";
+import { spawnSync } from "node:child_process";
 
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
-const svg = readFileSync(join(root, "play/icon.svg"));
+const src1024 = join(root, "play/icon-1024.png");
+const src512 = join(root, "play/icon-512.png");
 
-function render(size, out) {
-  const png = new Resvg(svg, {
-    fitTo: { mode: "width", value: size },
-  }).render().asPng();
-  mkdirSync(dirname(out), { recursive: true });
-  writeFileSync(out, png);
+function sips(args) {
+  const r = spawnSync("sips", args, { encoding: "utf8" });
+  if (r.status !== 0) {
+    throw new Error(r.stderr || r.stdout || "sips failed");
+  }
+}
+
+function resizePng(src, dest, size, flatten = false) {
+  mkdirSync(dirname(dest), { recursive: true });
+  sips(["-z", String(size), String(size), src, "--out", dest]);
+  if (!flatten) return;
+  const tmp = `${dest}.tmp.jpg`;
+  sips(["-s", "format", "jpeg", dest, "--out", tmp]);
+  sips(["-s", "format", "png", tmp, "--out", dest]);
+  try {
+    unlinkSync(tmp);
+  } catch {
+    /* ignore */
+  }
 }
 
 const mip = join(root, "android/app/src/main/res");
@@ -24,15 +38,14 @@ const sizes = [
 ];
 
 for (const [folder, size] of sizes) {
-  render(size, join(mip, folder, "ic_launcher.png"));
-  render(size, join(mip, folder, "ic_launcher_round.png"));
-  render(Math.round(size * 2.25), join(mip, folder, "ic_launcher_foreground.png"));
+  const dir = join(mip, folder);
+  resizePng(src1024, join(dir, "ic_launcher.png"), size);
+  resizePng(src1024, join(dir, "ic_launcher_round.png"), size);
+  resizePng(src1024, join(dir, "ic_launcher_foreground.png"), Math.round(size * 2.25));
 }
 
-render(512, join(root, "play/icon-512.png"));
-render(1024, join(root, "play/icon-1024.png"));
+copyFileSync(src512, join(root, "play/icon-512.png"));
+resizePng(src1024, join(root, "store/ios/icon-1024.png"), 1024, true);
+resizePng(src1024, join(root, "ios/App/App/Assets.xcassets/AppIcon.appiconset/AppIcon-512@2x.png"), 1024, true);
 
-const feature = readFileSync(join(root, "play/feature-graphic.svg"));
-const featurePng = new Resvg(feature, { fitTo: { mode: "width", value: 1024 } }).render().asPng();
-writeFileSync(join(root, "play/feature-graphic.png"), featurePng);
-console.log("Android and Play icons written");
+console.log("Android mipmaps and iOS 1024 (RGB, no alpha) written from play/icon-1024.png");
